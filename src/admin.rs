@@ -38,6 +38,7 @@ pub fn admin_routes() -> Router<Arc<AppState>> {
         .route("/api/admin/users/:id/unban", post(admin_unban_user))
         // Agents & Tunnels
         .route("/api/agents", get(list_agents))
+        .route("/api/agents/generate-token", post(generate_agent_token))
         .route("/api/agents/:id", delete(delete_agent))
         .route("/api/tunnels", get(list_tunnels).post(create_tunnel))
         .route("/api/tunnels/:id", delete(delete_tunnel).put(update_tunnel))
@@ -352,6 +353,28 @@ async fn list_agents(
 
     (StatusCode::OK, Json(agents)).into_response()
 }
+
+async fn generate_agent_token(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let user_id = get_current_user_id(&headers, &state).await
+        .ok_or((StatusCode::UNAUTHORIZED, "Please sign in first".into()))?;
+
+    let db = state.db.lock().await;
+    let existing_agents = db::list_agents_for_user(&db, &user_id)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    if let Some(first) = existing_agents.first() {
+        return Ok((StatusCode::OK, Json(serde_json::json!({ "token": first.token, "id": first.id }))));
+    }
+
+    let new_agent = db::create_agent_for_user(&db, &user_id, "My Computer")
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    Ok((StatusCode::OK, Json(serde_json::json!({ "token": new_agent.token, "id": new_agent.id }))))
+}
+
 
 async fn delete_agent(
     Path(id): Path<String>,

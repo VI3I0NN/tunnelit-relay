@@ -117,6 +117,7 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="openQuickLauncherModal()">⚡ 1-Click Лаунчер</button>
                 <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
                 <button class="btn btn-sm" onclick="openCreateModal()">+ New Tunnel</button>
             </div>
@@ -125,7 +126,10 @@
         <!-- AGENTS SECTION (Feature 4: Multi-Agent) -->
         <div class="section-header">
             <div class="section-title">Connected Devices (Multi-Agents)</div>
-            <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" onclick="openQuickLauncherModal()">⚡ 1-Click Лаунчер</button>
+                <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
+            </div>
         </div>
         <div id="agents-grid" class="grid">
             <!-- Dynamically populated -->
@@ -161,6 +165,47 @@
                 <button class="btn" id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
             </div>
         </div>
+    </div>
+
+    <!-- QUICK LAUNCHER MODAL (Feature 10) -->
+    <div id="launcher-modal" class="modal-overlay">
+        <div class="modal" style="max-width: 580px;">
+            <div class="modal-title">⚡ 1-Click Лаунчер устройства</div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5;">
+                Скачайте готовый файл для вашей ОС или скопируйте команду в терминал. Устройство сразу привяжется к вашей учетной записи с вашим постоянным портом!
+            </p>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button class="btn" style="flex: 1;" onclick="downloadQuickLauncher('sh')">📥 Скачать для Linux (.sh)</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="downloadQuickLauncher('bat')">📥 Скачать Windows (.bat)</button>
+            </div>
+
+            <div style="margin-bottom: 16px; text-align: left;">
+                <div class="form-label" style="display: flex; justify-content: space-between;">
+                    <span>Команда для Linux / Ubuntu (вставьте в терминал):</span>
+                    <span style="cursor: pointer; color: #60a5fa;" onclick="copyCmd('sh')">📋 Копировать</span>
+                </div>
+                <div class="code-snippet" id="sh-cmd-display" style="display: block; width: 100%; word-break: break-all; cursor: pointer; text-align: left; margin-top: 6px;" onclick="copyCmd('sh')">
+                    Загрузка...
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; text-align: left;">
+                <div class="form-label" style="display: flex; justify-content: space-between;">
+                    <span>Команда для Windows PowerShell:</span>
+                    <span style="cursor: pointer; color: #60a5fa;" onclick="copyCmd('bat')">📋 Копировать</span>
+                </div>
+                <div class="code-snippet" id="bat-cmd-display" style="display: block; width: 100%; word-break: break-all; cursor: pointer; text-align: left; margin-top: 6px;" onclick="copyCmd('bat')">
+                    Загрузка...
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeQuickLauncherModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <!-- LINK BY CODE MODAL -->
     <div id="claim-modal" class="modal-overlay">
         <div class="modal">
@@ -178,6 +223,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- MASTER ADMIN MODAL (Feature 9) -->
     <div id="admin-modal" class="modal-overlay">
@@ -484,10 +530,58 @@
         }
 
         // Feature 10: 1-Click Launchers
-        function downloadLauncher(ext) {
-            const token = agents[0] ? agents[0].token : '';
-            window.location.href = `/api/scripts/launcher.${ext}?token=${encodeURIComponent(token)}`;
+        let activeLauncherToken = null;
+
+        async function openQuickLauncherModal() {
+            if (!sessionToken) {
+                openAuthModal('login');
+                return;
+            }
+
+            document.getElementById('launcher-modal').style.display = 'flex';
+            document.getElementById('sh-cmd-display').innerText = 'Получение токена...';
+            document.getElementById('bat-cmd-display').innerText = 'Получение токена...';
+
+            try {
+                const res = await fetch('/api/agents/generate-token', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    activeLauncherToken = data.token;
+                    const origin = window.location.origin;
+                    const shUrl = `${origin}/api/scripts/launcher.sh?token=${activeLauncherToken}`;
+                    const batUrl = `${origin}/api/scripts/launcher.bat?token=${activeLauncherToken}`;
+
+                    document.getElementById('sh-cmd-display').innerText = `curl -sSL "${shUrl}" | bash`;
+                    document.getElementById('bat-cmd-display').innerText = `powershell -Command "iwr ${batUrl} -OutFile launch.bat; .\\launch.bat"`;
+                } else {
+                    const err = await res.text();
+                    alert("Ошибка: " + err);
+                    closeQuickLauncherModal();
+                }
+            } catch(e) {
+                alert("Ошибка сети: " + e);
+                closeQuickLauncherModal();
+            }
         }
+
+        function closeQuickLauncherModal() {
+            document.getElementById('launcher-modal').style.display = 'none';
+        }
+
+        function downloadQuickLauncher(ext) {
+            if (!activeLauncherToken) return;
+            window.location.href = `/api/scripts/launcher.${ext}?token=${encodeURIComponent(activeLauncherToken)}`;
+        }
+
+        function copyCmd(type) {
+            const el = document.getElementById(type === 'sh' ? 'sh-cmd-display' : 'bat-cmd-display');
+            navigator.clipboard.writeText(el.innerText);
+            alert("Команда скопирована в буфер обмена!");
+        }
+
 
         // Link Device by Code Logic
         function openClaimModal() {

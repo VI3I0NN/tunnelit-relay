@@ -51,6 +51,8 @@ pub enum RelayMessage {
     ClaimReady {
         code: String,
         claim_url: String,
+        #[serde(default)]
+        token: Option<String>,
     },
     /// Full sync of all configured tunnels for this agent
     SyncTunnels {

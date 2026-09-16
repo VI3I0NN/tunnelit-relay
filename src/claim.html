@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Link Device — tunnelit</title>
+    <title>Привязка устройства — tunnelit</title>
     <style>
         :root {
             --bg: #0d0f12;
@@ -11,6 +11,7 @@
             --border: #272c38;
             --primary: #3b82f6;
             --primary-hover: #2563eb;
+            --success: #10b981;
             --text: #f3f4f6;
             --text-muted: #9ca3af;
         }
@@ -18,35 +19,97 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
 
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-        .logo { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 24px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; max-width: 460px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .logo { font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; text-align: center; }
         .logo span { color: var(--primary); }
 
-        h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; color: #fff; }
-        p { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+        h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #fff; text-align: center; }
+        p.subtitle { font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; text-align: center; }
 
-        .code-box { background: #0f1218; border: 1px dashed var(--border); padding: 14px; border-radius: 10px; font-size: 24px; font-family: monospace; font-weight: 700; letter-spacing: 4px; color: #60a5fa; margin-bottom: 24px; }
+        .code-box { background: #0f1218; border: 1px dashed var(--border); padding: 12px; border-radius: 10px; font-size: 26px; font-family: monospace; font-weight: 700; letter-spacing: 5px; color: #60a5fa; margin-bottom: 20px; text-align: center; }
 
-        .btn { width: 100%; background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.15s; }
+        .user-box { background: #131722; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 14px; }
+        .user-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .user-row:last-child { margin-bottom: 0; }
+        .badge-port { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 2px 8px; border-radius: 6px; font-weight: 700; font-family: monospace; }
+
+        .auth-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .tab-btn { background: transparent; border: none; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; padding: 6px 12px; border-radius: 6px; }
+        .tab-btn.active { background: #222734; color: #fff; }
+
+        .form-group { margin-bottom: 14px; text-align: left; }
+        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-input { width: 100%; background: #0f1218; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 14px; outline: none; }
+        .form-input:focus { border-color: var(--primary); }
+
+        .btn { width: 100%; background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.15s; }
         .btn:hover { background: var(--primary-hover); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .success-box { display: none; margin-top: 20px; padding: 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; color: #34d399; font-size: 14px; }
+        .guest-link { display: block; text-align: center; margin-top: 14px; font-size: 12px; color: var(--text-muted); text-decoration: none; cursor: pointer; }
+        .guest-link:hover { color: #fff; text-decoration: underline; }
+
+        .success-box { display: none; padding: 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; color: #34d399; font-size: 14px; text-align: center; }
     </style>
 </head>
 <body>
     <div class="card">
         <div class="logo">⚡ tunnel<span>it</span></div>
-        <h2>Link Device to Account</h2>
-        <p>A new agent on your computer wants to link with this tunnelit server.</p>
+        <h2>Привязка устройства</h2>
+        <p class="subtitle">Новое устройство ожидает подключения к серверу tunnelit.</p>
         
         <div class="code-box" id="code-display">------</div>
 
-        <button class="btn" id="claim-btn" onclick="claimAgent()">Link Device</button>
+        <!-- STATE 1: LOGGED IN USER -->
+        <div id="state-logged-in" style="display: none;">
+            <div class="user-box">
+                <div class="user-row">
+                    <span style="color: var(--text-muted);">Учетная запись:</span>
+                    <b id="user-display-name">...</b>
+                </div>
+                <div class="user-row">
+                    <span style="color: var(--text-muted);">Выделенный порт:</span>
+                    <span class="badge-port" id="user-display-port">:00000</span>
+                </div>
+            </div>
+            <button class="btn" id="claim-btn" onclick="claimAgentAsUser()">✅ Привязать к моему аккаунту</button>
+        </div>
 
+        <!-- STATE 2: NOT LOGGED IN -->
+        <div id="state-not-logged-in" style="display: none;">
+            <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #facc15; margin-bottom: 16px;">
+                💡 Войдите или создайте аккаунт, чтобы привязать устройство к вашему постоянному выделенному порту!
+            </div>
+
+            <div class="auth-tabs">
+                <button id="tab-login" class="tab-btn active" onclick="switchTab('login')">Вход</button>
+                <button id="tab-reg" class="tab-btn" onclick="switchTab('reg')">Регистрация</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Имя пользователя</label>
+                <input id="auth-username" type="text" class="form-input" placeholder="Введите логин">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <input id="auth-password" type="password" class="form-input" placeholder="Введите пароль (от 6 символов)">
+            </div>
+
+            <button class="btn" id="auth-submit-btn" onclick="submitAuthAndClaim()">Войти и привязать</button>
+            <a class="guest-link" onclick="claimAgentAsGuest()">Привязать без аккаунта (Гостевой режим)</a>
+        </div>
+
+        <!-- STATE 3: SUCCESS -->
         <div id="success-msg" class="success-box">
-            <b>✅ Device successfully linked!</b>
-            <p style="margin: 8px 0 16px; font-size: 13px;">Your agent terminal will now continue automatically.</p>
-            <a href="/" style="color: #60a5fa; text-decoration: none; font-weight: 600; font-size: 14px;">Go to Dashboard &rarr;</a>
+            <div style="font-size: 32px; margin-bottom: 10px;">🎉</div>
+            <b style="font-size: 16px; display: block; margin-bottom: 6px;">Устройство успешно привязано!</b>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 18px;">
+                Терминал агента на компьютере автоматически продолжит работу и активирует туннели.
+            </p>
+            <a href="/" style="display: inline-block; background: var(--primary); color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                Перейти в панель управления &rarr;
+            </a>
         </div>
     </div>
 
@@ -55,28 +118,127 @@
         const code = pathParts[pathParts.length - 1];
         document.getElementById('code-display').innerText = code;
 
-        async function claimAgent() {
-            const btn = document.getElementById('claim-btn');
+        let authTab = 'login';
+        let currentUser = null;
+
+        async function init() {
+            const token = localStorage.getItem('tunnelit_session');
+            if (token) {
+                try {
+                    const res = await fetch('/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        currentUser = await res.json();
+                        document.getElementById('user-display-name').innerText = currentUser.username;
+                        document.getElementById('user-display-port').innerText = `:${currentUser.dedicated_port}`;
+                        document.getElementById('state-logged-in').style.display = 'block';
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            document.getElementById('state-not-logged-in').style.display = 'block';
+        }
+
+        function switchTab(tab) {
+            authTab = tab;
+            if (tab === 'login') {
+                document.getElementById('tab-login').className = 'tab-btn active';
+                document.getElementById('tab-reg').className = 'tab-btn';
+                document.getElementById('auth-submit-btn').innerText = 'Войти и привязать';
+            } else {
+                document.getElementById('tab-reg').className = 'tab-btn active';
+                document.getElementById('tab-login').className = 'tab-btn';
+                document.getElementById('auth-submit-btn').innerText = 'Зарегистрироваться и привязать';
+            }
+        }
+
+        async function submitAuthAndClaim() {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!username || !password) {
+                alert("Пожалуйста, заполните логин и пароль!");
+                return;
+            }
+
+            const btn = document.getElementById('auth-submit-btn');
             btn.disabled = true;
-            btn.innerText = "Linking...";
+            btn.innerText = "Авторизация...";
+
+            const endpoint = authTab === 'login' ? '/api/auth/login' : '/api/auth/register';
 
             try {
-                const res = await fetch(`/api/claim/${code}`, { method: 'POST' });
+                const authRes = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!authRes.ok) {
+                    const err = await authRes.text();
+                    alert("Ошибка: " + err);
+                    btn.disabled = false;
+                    switchTab(authTab);
+                    return;
+                }
+
+                const authData = await authRes.json();
+                localStorage.setItem('tunnelit_session', authData.token);
+
+                btn.innerText = "Привязка устройства...";
+                await doClaim(authData.token);
+            } catch(e) {
+                alert("Сетевая ошибка: " + e);
+                btn.disabled = false;
+                switchTab(authTab);
+            }
+        }
+
+        async function claimAgentAsUser() {
+            const token = localStorage.getItem('tunnelit_session');
+            const btn = document.getElementById('claim-btn');
+            btn.disabled = true;
+            btn.innerText = "Привязка...";
+            await doClaim(token);
+        }
+
+        async function claimAgentAsGuest() {
+            if (!confirm("Вы уверены? Без учетной записи у вас не будет постоянного выделенного порта.")) {
+                return;
+            }
+            await doClaim(null);
+        }
+
+        async function doClaim(sessionToken) {
+            try {
+                const headers = {};
+                if (sessionToken) {
+                    headers['Authorization'] = `Bearer ${sessionToken}`;
+                }
+
+                const res = await fetch(`/api/claim/${code}`, {
+                    method: 'POST',
+                    headers: headers
+                });
+
                 if (res.ok) {
-                    btn.style.display = 'none';
+                    document.getElementById('state-logged-in').style.display = 'none';
+                    document.getElementById('state-not-logged-in').style.display = 'none';
                     document.getElementById('success-msg').style.display = 'block';
                 } else {
                     const err = await res.text();
-                    alert("Claim failed: " + err);
-                    btn.disabled = false;
-                    btn.innerText = "Try Again";
+                    alert("Ошибка привязки: " + err);
+                    location.reload();
                 }
             } catch(e) {
-                alert("Network error: " + e);
-                btn.disabled = false;
-                btn.innerText = "Try Again";
+                alert("Ошибка сети: " + e);
+                location.reload();
             }
         }
+
+        init();
     </script>
 </body>
 </html>
+

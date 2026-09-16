@@ -256,6 +256,29 @@ pub fn create_agent_claim(conn: &Connection, name: &str) -> Result<(AgentRecord,
     Ok((record, claim_code))
 }
 
+pub fn create_agent_for_user(conn: &Connection, user_id: &str, name: &str) -> Result<AgentRecord> {
+    let id = Uuid::new_v4().to_string();
+    let token = format!("tk_{}", Uuid::new_v4().to_string().replace('-', ""));
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+
+    conn.execute(
+        "INSERT INTO agents (id, user_id, token, claim_code, name, created_at, last_seen, is_online)
+         VALUES (?1, ?2, ?3, NULL, ?4, ?5, ?6, 0)",
+        params![id, user_id, token, name, now, now],
+    )?;
+
+    Ok(AgentRecord {
+        id,
+        user_id: Some(user_id.to_string()),
+        token,
+        claim_code: None,
+        name: name.to_string(),
+        created_at: now,
+        last_seen: now,
+        is_online: false,
+    })
+}
+
 pub fn claim_agent_to_user(conn: &Connection, code: &str, user_id: &str) -> Result<Option<AgentRecord>> {
     let mut stmt = conn.prepare(
         "SELECT id, user_id, token, claim_code, name, created_at, last_seen, is_online

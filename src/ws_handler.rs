@@ -51,7 +51,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                     Ok(AgentMessage::RequestClaim { hostname }) => {
                         let db = state.db.lock().await;
                         match db::create_agent_claim(&db, &hostname) {
-                            Ok((_record, code)) => {
+                            Ok((record, code)) => {
                                 info!("Claim code {} generated for agent '{}'", code, hostname);
                                 current_claim_code = Some(code.clone());
                                 {
@@ -61,6 +61,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                                 let _ = tx_clone.send(RelayMessage::ClaimReady {
                                     code: code.clone(),
                                     claim_url: format!("/claim/{}", code),
+                                    token: Some(record.token),
                                 });
                             }
                             Err(e) => {
@@ -79,6 +80,22 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
 
                         match agent_opt {
                             Ok(Some(agent)) => {
+                                // If agent still has an active claim code, keep waiting for web confirmation
+                                if let Some(code) = agent.claim_code {
+                                    info!("Agent '{}' token is pending web claim with code {}", agent.name, code);
+                                    current_claim_code = Some(code.clone());
+                                    {
+                                        let mut pending = state.pending_claims.write().await;
+                                        pending.insert(code.clone(), tx_clone.clone());
+                                    }
+                                    let _ = tx_clone.send(RelayMessage::ClaimReady {
+                                        code: code.clone(),
+                                        claim_url: format!("/claim/{}", code),
+                                        token: Some(token),
+                                    });
+                                    continue;
+                                }
+
                                 let agent_id = match Uuid::parse_str(&agent.id) {
                                     Ok(id) => id,
                                     Err(_) => {
