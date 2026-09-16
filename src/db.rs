@@ -327,6 +327,39 @@ pub fn set_tunnel_enabled(conn: &Connection, id: &str, enabled: bool) -> Result<
     Ok(())
 }
 
+pub fn update_tunnel(
+    conn: &Connection,
+    id: &str,
+    name: &str,
+    local_port: u16,
+    protocol: &str,
+    subdomain: Option<&str>,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE tunnels SET name = ?1, local_port = ?2, protocol = ?3, subdomain = ?4 WHERE id = ?5",
+        params![name, local_port, protocol, subdomain, id],
+    )?;
+    Ok(())
+}
+
+pub fn is_subdomain_taken(conn: &Connection, subdomain: &str, exclude_id: Option<&str>) -> Result<bool> {
+    if let Some(ex_id) = exclude_id {
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM tunnels WHERE LOWER(subdomain) = LOWER(?1) AND id != ?2",
+            params![subdomain, ex_id],
+            |r| r.get(0),
+        )?;
+        Ok(count > 0)
+    } else {
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM tunnels WHERE LOWER(subdomain) = LOWER(?1)",
+            params![subdomain],
+            |r| r.get(0),
+        )?;
+        Ok(count > 0)
+    }
+}
+
 pub fn delete_tunnel(conn: &Connection, id: &str) -> Result<()> {
     conn.execute("DELETE FROM tunnels WHERE id = ?1", params![id])?;
     Ok(())

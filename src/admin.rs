@@ -27,7 +27,7 @@ pub fn admin_routes() -> Router<Arc<AppState>> {
         .route("/api/agents", get(list_agents))
         .route("/api/agents/:id", delete(delete_agent))
         .route("/api/tunnels", get(list_tunnels).post(create_tunnel))
-        .route("/api/tunnels/:id", delete(delete_tunnel))
+        .route("/api/tunnels/:id", delete(delete_tunnel).put(update_tunnel))
         .route("/api/tunnels/:id/toggle", post(toggle_tunnel))
 }
 
@@ -147,10 +147,22 @@ async fn create_tunnel(
         Err(_) => return Err((StatusCode::BAD_REQUEST, "Invalid agent ID".into())),
     };
 
+    if let Some(sub) = &body.subdomain {
+        let clean = sub.trim();
+        if !clean.is_empty() {
+            let db = state.db.lock().await;
+            if db::is_subdomain_taken(&db, clean, None).unwrap_or(false) {
+                return Err((StatusCode::CONFLICT, format!("Subdomain '{}' is already in use by another tunnel", clean)));
+            }
+        }
+    }
+
     let public_port = match state.allocate_port(body.preferred_port).await {
         Some(p) => p,
         None => return Err((StatusCode::CONFLICT, "No ports available or requested port is already in use".into())),
     };
+
+    let clean_subdomain = body.subdomain.as_deref().map(|s| s.trim()).filter(|s| !s.is_empty());
 
     let tunnel_record = {
         let db = state.db.lock().await;
@@ -161,7 +173,7 @@ async fn create_tunnel(
             body.local_port,
             &body.protocol,
             public_port,
-            body.subdomain.as_deref(),
+            clean_subdomain,
         )
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?
     };
@@ -192,6 +204,56 @@ async fn create_tunnel(
     }
 
     Ok((StatusCode::CREATED, Json(tunnel_record)).into_response())
+}
+
+#[derive(Deserialize)]
+struct UpdateTunnelRequest {
+    name: String,
+    local_port: u16,
+    protocol: String,
+    subdomain: Option<String>,
+}
+
+async fn update_tunnel(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<UpdateTunnelRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let tunnel = {
+        let db = state.db.lock().await;
+        db::get_tunnel_by_id(&db, &id)
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?
+    };
+
+    let tunnel = match tunnel {
+        Some(t) => t,
+        None => return Err((StatusCode::NOT_FOUND, "Tunnel not found".into())),
+    };
+
+    let clean_sub = body.subdomain.as_deref().map(|s| s.trim()).filter(|s| !s.is_empty());
+
+    if let Some(sub) = clean_sub {
+        let db = state.db.lock().await;
+        if db::is_subdomain_taken(&db, sub, Some(&id)).unwrap_or(false) {
+            return Err((StatusCode::CONFLICT, format!("Subdomain '{}' is already taken by another tunnel", sub)));
+        }
+    }
+
+    {
+        let db = state.db.lock().await;
+        db::update_tunnel(&db, &id, &body.name, body.local_port, &body.protocol, clean_sub)
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    }
+
+    // Sync with agent
+    if let Ok(agent_id) = Uuid::parse_str(&tunnel.agent_id) {
+        let senders = state.agent_senders.read().await;
+        if let Some(sender) = senders.get(&agent_id) {
+            sync_agent_tunnels(agent_id, state.clone(), sender.clone()).await;
+        }
+    }
+
+    Ok(StatusCode::OK)
 }
 
 async fn toggle_tunnel(

@@ -147,6 +147,39 @@
         </div>
     </div>
 
+    <!-- EDIT TUNNEL MODAL -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-title">Edit Tunnel</div>
+            <input id="e-id" type="hidden">
+            <div class="form-group">
+                <label class="form-label">Tunnel Name</label>
+                <input id="e-name" type="text" class="form-input">
+            </div>
+            <div class="form-group" style="display: flex; gap: 12px;">
+                <div style="flex: 1;">
+                    <label class="form-label">Protocol</label>
+                    <select id="e-proto" class="form-select">
+                        <option value="tcp">TCP</option>
+                        <option value="udp">UDP</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label class="form-label">Local Port</label>
+                    <input id="e-local" type="number" class="form-input">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subdomain (e.g. mc1)</label>
+                <input id="e-subdomain" type="text" class="form-input">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn" onclick="submitEditTunnel()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let agents = [];
         let tunnels = [];
@@ -249,7 +282,10 @@
                             <span style="font-size: 12px; color: ${t.enabled ? '#10b981' : '#6b7280'}">
                                 ${t.enabled ? '🟢 Listening' : '⚪ Paused'}
                             </span>
-                            <button class="btn btn-danger btn-sm" onclick="deleteTunnel('${t.id}')">Delete</button>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-secondary btn-sm" onclick="openEditModal('${t.id}')">Edit</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteTunnel('${t.id}')">Delete</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -337,6 +373,52 @@
 
         function escapeHtml(str) {
             return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        function openEditModal(id) {
+            const t = tunnels.find(x => x.id === id);
+            if (!t) return;
+            document.getElementById('e-id').value = t.id;
+            document.getElementById('e-name').value = t.name || '';
+            document.getElementById('e-proto').value = t.protocol || 'tcp';
+            document.getElementById('e-local').value = t.local_port || '';
+            document.getElementById('e-subdomain').value = t.subdomain || '';
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        async function submitEditTunnel() {
+            const id = document.getElementById('e-id').value;
+            const name = document.getElementById('e-name').value || 'Tunnel';
+            const protocol = document.getElementById('e-proto').value;
+            const local_port = parseInt(document.getElementById('e-local').value);
+            const subdomain = document.getElementById('e-subdomain').value || null;
+
+            if (!local_port) {
+                alert("Please specify a local port!");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/tunnels/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, protocol, local_port, subdomain })
+                });
+
+                if (res.ok) {
+                    closeEditModal();
+                    loadData();
+                } else {
+                    const err = await res.text();
+                    alert("Failed to update: " + err);
+                }
+            } catch(e) {
+                alert("Error: " + e);
+            }
         }
 
         loadData();
