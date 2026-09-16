@@ -36,9 +36,11 @@ impl AppState {
     pub async fn allocate_port(&self, preferred: Option<u16>) -> Option<u16> {
         let mut allocated = self.allocated_ports.write().await;
         if let Some(p) = preferred {
-            if p >= self.port_range.0 && p <= self.port_range.1 && !allocated.contains(&p) {
+            if p >= 1024 && !allocated.contains(&p) {
                 allocated.insert(p);
                 return Some(p);
+            } else {
+                return None; // Explicitly requested port is taken or invalid (<1024)
             }
         }
         for p in self.port_range.0..=self.port_range.1 {

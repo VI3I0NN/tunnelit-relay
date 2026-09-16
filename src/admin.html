@@ -216,9 +216,10 @@
             }
 
             container.innerHTML = tunnels.map(t => {
-                const host = window.location.hostname;
-                const publicAddr = `${host}:${t.public_port}`;
-                const subdomainAddr = t.subdomain ? `${t.subdomain}.${host.replace('admin.', '')}` : null;
+                let baseDomain = window.location.hostname;
+                baseDomain = baseDomain.replace(/^cabinet\./, '').replace(/^admin\./, '');
+                const publicAddr = `${baseDomain}:${t.public_port}`;
+                const subdomainAddr = t.subdomain ? `${t.subdomain}.${baseDomain}` : null;
 
                 return `
                     <div class="card">
