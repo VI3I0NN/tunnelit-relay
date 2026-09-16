@@ -30,6 +30,7 @@ pub struct AppState {
     pub tcp_conn_senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Vec<u8>>>>>,
     pub port_range: (u16, u16),
     pub allocated_ports: Arc<RwLock<HashSet<u16>>>,
+    pub tunnel_tasks: Arc<RwLock<HashMap<Uuid, tokio::task::JoinHandle<()>>>>,
     pub db: Arc<Mutex<Connection>>,
 }
 
@@ -42,6 +43,7 @@ impl AppState {
             tcp_conn_senders: Arc::new(RwLock::new(HashMap::new())),
             port_range,
             allocated_ports: Arc::new(RwLock::new(HashSet::new())),
+            tunnel_tasks: Arc::new(RwLock::new(HashMap::new())),
             db: Arc::new(Mutex::new(db_conn)),
         })
     }

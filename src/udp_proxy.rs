@@ -31,6 +31,10 @@ pub async fn run_udp_proxy(
     // or just register individual senders in tcp_conn_senders that write to the same UDP socket.
     
     loop {
+        if agent_sender.is_closed() {
+            info!("Agent disconnected, closing UDP listener for tunnel {}", tunnel_id);
+            break;
+        }
         tokio::select! {
             result = socket.recv_from(&mut buf) => {
                 match result {

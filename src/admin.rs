@@ -47,6 +47,11 @@ async fn close_tunnel(
         state.free_port(t.public_port).await;
         let db = state.db.lock().await;
         let _ = db::remove_tunnel(&db, id);
+
+        let mut tasks = state.tunnel_tasks.write().await;
+        if let Some(task) = tasks.remove(&id) {
+            task.abort();
+        }
     }
     StatusCode::OK
 }

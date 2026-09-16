@@ -110,7 +110,11 @@ async fn handle_agent_message(
 
                         let _ = tx.send(RelayMessage::TunnelCreated { tunnel_id, public_port });
                         
-                        tokio::spawn(run_tcp_proxy(listener, tunnel_id, agent_id, state.clone(), tx.clone()));
+                        let handle = tokio::spawn(run_tcp_proxy(listener, tunnel_id, agent_id, state.clone(), tx.clone()));
+                        {
+                            let mut tasks = state.tunnel_tasks.write().await;
+                            tasks.insert(tunnel_id, handle);
+                        }
                     }
                     Err(e) => {
                         error!("Failed to bind TCP port {}: {}", public_port, e);
@@ -143,7 +147,11 @@ async fn handle_agent_message(
 
                         let _ = tx.send(RelayMessage::TunnelCreated { tunnel_id, public_port });
                         
-                        tokio::spawn(run_udp_proxy(socket, tunnel_id, agent_id, state.clone(), tx.clone()));
+                        let handle = tokio::spawn(run_udp_proxy(socket, tunnel_id, agent_id, state.clone(), tx.clone()));
+                        {
+                            let mut tasks = state.tunnel_tasks.write().await;
+                            tasks.insert(tunnel_id, handle);
+                        }
                     }
                     Err(e) => {
                         error!("Failed to bind UDP port {}: {}", public_port, e);
@@ -195,6 +203,16 @@ async fn cleanup_agent(agent_id: Uuid, state: Arc<AppState>) {
             }
         });
     }
+
+    {
+        let mut tasks = state.tunnel_tasks.write().await;
+        for t_id in &tunnels_to_remove {
+            if let Some(handle) = tasks.remove(t_id) {
+                info!("Closing proxy listener for tunnel {}", t_id);
+                handle.abort();
+            }
+        }
+    }
     
     for port in ports_to_free {
         state.free_port(port).await;
@@ -204,5 +222,4 @@ async fn cleanup_agent(agent_id: Uuid, state: Arc<AppState>) {
     for t_id in tunnels_to_remove {
         let _ = db::remove_tunnel(&db, t_id);
     }
-    // TCP/UDP proxies will naturally fail when agent_sender is closed, but we could also track and abort their tasks.
 }

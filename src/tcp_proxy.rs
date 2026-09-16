@@ -18,6 +18,10 @@ pub async fn run_tcp_proxy(
 ) {
     info!("Starting TCP proxy for tunnel {} on {:?}", tunnel_id, listener.local_addr());
     loop {
+        if agent_sender.is_closed() {
+            info!("Agent disconnected, closing TCP listener for tunnel {}", tunnel_id);
+            break;
+        }
         match listener.accept().await {
             Ok((mut stream, addr)) => {
                 info!("New TCP connection from {} for tunnel {}", addr, tunnel_id);
@@ -29,7 +33,7 @@ pub async fn run_tcp_proxy(
                     conn_id,
                 }) {
                     error!("Failed to notify agent of new connection: {}", e);
-                    continue;
+                    break;
                 }
 
                 let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
