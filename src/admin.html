@@ -3,134 +3,343 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tunnelit Relay Admin</title>
+    <title>tunnelit — Dashboard</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
-        h1, h2 { color: #ffffff; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background-color: #1e1e1e; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #333; }
-        th { background-color: #2c2c2c; font-weight: 600; }
-        tr:last-child td { border-bottom: none; }
-        button { background-color: #4CAF50; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-        button.reject { background-color: #f44336; }
-        button.delete { background-color: #ff9800; }
-        .container { max-width: 1200px; margin: 0 auto; }
+        :root {
+            --bg: #0d0f12;
+            --surface: #161920;
+            --surface-hover: #1e222b;
+            --border: #272c38;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .logo { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; color: #fff; }
+        .logo span { color: var(--primary); }
+
+        .btn { background: var(--primary); color: #fff; border: none; padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--surface-hover); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: #282e3b; }
+        .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background: var(--danger); color: #fff; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .badge-tcp { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .badge-udp { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .dot-online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .dot-offline { background: #6b7280; }
+
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin: 32px 0 16px; }
+        .section-title { font-size: 18px; font-weight: 700; color: #fff; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; transition: border-color 0.2s; position: relative; }
+        .card:hover { border-color: #3b4252; }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .card-title { font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .card-body { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+        .card-footer { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+
+        .copy-box { background: #0f1218; border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 13px; color: #60a5fa; display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
+        .copy-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; }
+        .copy-btn:hover { color: #fff; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 460px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        .form-input, .form-select { width: 100%; background: #0f1218; border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; color: #fff; font-size: 14px; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+        /* Switch */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #374151; border-radius: 24px; transition: .2s; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .2s; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .empty-state { text-align: center; padding: 40px 20px; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted); }
+        .empty-state p { margin-top: 8px; font-size: 14px; }
+        .code-snippet { background: #0f1218; border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; font-family: monospace; display: inline-block; margin-top: 12px; color: #34d399; font-size: 13px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Tunnelit Relay Admin</h1>
-        
-        <h2>Active Tunnels</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Protocol</th>
-                    <th>Local Port</th>
-                    <th>Public Port</th>
-                    <th>Created At</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="tunnels-body">
-            </tbody>
-        </table>
+        <header>
+            <div class="logo">⚡ tunnel<span>it</span></div>
+            <div>
+                <button class="btn" onclick="openCreateModal()">+ New Tunnel</button>
+            </div>
+        </header>
 
-        <h2>Subdomain Requests</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tunnel ID</th>
-                    <th>Desired Name</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="requests-body">
-            </tbody>
-        </table>
+        <!-- AGENTS SECTION -->
+        <div class="section-header">
+            <div class="section-title">Connected Devices (Agents)</div>
+        </div>
+        <div id="agents-grid" class="grid">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- TUNNELS SECTION -->
+        <div class="section-header">
+            <div class="section-title">Active Tunnels</div>
+        </div>
+        <div id="tunnels-grid" class="grid">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <!-- CREATE TUNNEL MODAL -->
+    <div id="create-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-title">Create Tunnel</div>
+            <div class="form-group">
+                <label class="form-label">Target Agent</label>
+                <select id="t-agent" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tunnel Name</label>
+                <input id="t-name" type="text" class="form-input" placeholder="e.g. Minecraft Java">
+            </div>
+            <div class="form-group" style="display: flex; gap: 12px;">
+                <div style="flex: 1;">
+                    <label class="form-label">Protocol</label>
+                    <select id="t-proto" class="form-select">
+                        <option value="tcp">TCP (Minecraft, SSH, Web)</option>
+                        <option value="udp">UDP (Bedrock, Voice, Fast)</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label class="form-label">Local Port</label>
+                    <input id="t-local" type="number" class="form-input" placeholder="25565">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Public Remote Port (Optional, leave blank for auto)</label>
+                <input id="t-public" type="number" class="form-input" placeholder="e.g. 7777">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subdomain (Optional)</label>
+                <input id="t-subdomain" type="text" class="form-input" placeholder="e.g. b543kjb">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button class="btn" onclick="submitCreateTunnel()">Create Tunnel</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        async function fetchTunnels() {
-            const res = await fetch('/api/tunnels');
-            const data = await res.json();
-            const tbody = document.getElementById('tunnels-body');
-            tbody.innerHTML = '';
-            data.forEach(t => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${t.id.substring(0, 8)}...</td>
-                    <td>${t.protocol.toUpperCase()}</td>
-                    <td>${t.local_port}</td>
-                    <td>${t.public_port}</td>
-                    <td>${new Date(t.created_at * 1000).toLocaleString()}</td>
-                    <td>
-                        <button class="delete" onclick="deleteTunnel('${t.id}')">Close</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+        let agents = [];
+        let tunnels = [];
+
+        async function loadData() {
+            try {
+                const [agentsRes, tunnelsRes] = await Promise.all([
+                    fetch('/api/agents'),
+                    fetch('/api/tunnels')
+                ]);
+                agents = await agentsRes.json();
+                tunnels = await tunnelsRes.json();
+
+                renderAgents();
+                renderTunnels();
+            } catch(e) {
+                console.error("Error loading data:", e);
+            }
         }
 
-        async function fetchRequests() {
-            const res = await fetch('/api/requests');
-            const data = await res.json();
-            const tbody = document.getElementById('requests-body');
-            tbody.innerHTML = '';
-            data.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${r.id.substring(0, 8)}...</td>
-                    <td>${r.tunnel_id.substring(0, 8)}...</td>
-                    <td>${r.desired_name}</td>
-                    <td>${r.status}</td>
-                    <td>
-                        ${r.status === 'pending' ? `
-                            <button onclick="approveRequest('${r.id}')">Approve</button>
-                            <button class="reject" onclick="rejectRequest('${r.id}')">Reject</button>
-                        ` : '-'}
-                    </td>
+        function renderAgents() {
+            const container = document.getElementById('agents-grid');
+            if (!agents || agents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <h3>No agents connected yet</h3>
+                        <p>To connect your computer, run this command in terminal:</p>
+                        <div class="code-snippet">tunnelit-agent</div>
+                    </div>
                 `;
-                tbody.appendChild(tr);
-            });
+                return;
+            }
+
+            container.innerHTML = agents.map(a => `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="status-dot ${a.is_online ? 'dot-online' : 'dot-offline'}"></span>
+                            ${escapeHtml(a.name)}
+                        </div>
+                        <span style="font-size: 12px; color: ${a.is_online ? '#10b981' : '#9ca3af'}; font-weight: 600;">
+                            ${a.is_online ? 'ONLINE' : 'OFFLINE'}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div>Last active: ${new Date(a.last_seen * 1000).toLocaleTimeString()}</div>
+                        <div style="font-size: 12px; margin-top: 4px; color: #6b7280;">Token: ${a.token.substring(0, 10)}...</div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary btn-sm" onclick="copyToken('${a.token}')">📋 Copy Token</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteAgent('${a.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTunnels() {
+            const container = document.getElementById('tunnels-grid');
+            if (!tunnels || tunnels.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <h3>No tunnels configured</h3>
+                        <p>Click "New Tunnel" above to forward a local port!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = tunnels.map(t => {
+                const host = window.location.hostname;
+                const publicAddr = `${host}:${t.public_port}`;
+                const subdomainAddr = t.subdomain ? `${t.subdomain}.${host.replace('admin.', '')}` : null;
+
+                return `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="badge badge-${t.protocol}">${t.protocol}</span>
+                                ${escapeHtml(t.name || 'Tunnel')}
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" ${t.enabled ? 'checked' : ''} onchange="toggleTunnel('${t.id}')">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="card-body">
+                            <div>Forwards: <code>127.0.0.1:${t.local_port}</code></div>
+                            <div class="copy-box">
+                                <span>${publicAddr}</span>
+                                <button class="copy-btn" onclick="copyText('${publicAddr}')">Copy</button>
+                            </div>
+                            ${subdomainAddr ? `
+                                <div style="font-size: 13px; color: #a78bfa;">
+                                    Domain: <b>${subdomainAddr}</b>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="card-footer">
+                            <span style="font-size: 12px; color: ${t.enabled ? '#10b981' : '#6b7280'}">
+                                ${t.enabled ? '🟢 Listening' : '⚪ Paused'}
+                            </span>
+                            <button class="btn btn-danger btn-sm" onclick="deleteTunnel('${t.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openCreateModal() {
+            const select = document.getElementById('t-agent');
+            select.innerHTML = agents.map(a => `
+                <option value="${a.id}">${escapeHtml(a.name)} (${a.is_online ? 'Online' : 'Offline'})</option>
+            `).join('');
+
+            if (agents.length === 0) {
+                alert("Please start an agent on your computer first!");
+                return;
+            }
+
+            document.getElementById('create-modal').style.display = 'flex';
+        }
+
+        function closeCreateModal() {
+            document.getElementById('create-modal').style.display = 'none';
+        }
+
+        async function submitCreateTunnel() {
+            const agent_id = document.getElementById('t-agent').value;
+            const name = document.getElementById('t-name').value || 'Server';
+            const protocol = document.getElementById('t-proto').value;
+            const local_port = parseInt(document.getElementById('t-local').value);
+            const preferred_port = document.getElementById('t-public').value ? parseInt(document.getElementById('t-public').value) : null;
+            const subdomain = document.getElementById('t-subdomain').value || null;
+
+            if (!local_port) {
+                alert("Please specify a local port!");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/tunnels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id, name, protocol, local_port, preferred_port, subdomain })
+                });
+
+                if (res.ok) {
+                    closeCreateModal();
+                    loadData();
+                } else {
+                    const err = await res.text();
+                    alert("Failed to create tunnel: " + err);
+                }
+            } catch(e) {
+                alert("Error creating tunnel: " + e);
+            }
+        }
+
+        async function toggleTunnel(id) {
+            await fetch(`/api/tunnels/${id}/toggle`, { method: 'POST' });
+            loadData();
         }
 
         async function deleteTunnel(id) {
-            if(confirm('Close this tunnel?')) {
+            if (confirm("Delete this tunnel?")) {
                 await fetch(`/api/tunnels/${id}`, { method: 'DELETE' });
-                fetchTunnels();
+                loadData();
             }
         }
 
-        async function approveRequest(id) {
-            const name = prompt("Confirm subdomain name:", "");
-            if (name) {
-                await fetch(`/api/requests/${id}/approve`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subdomain: name })
-                });
-                fetchRequests();
+        async function deleteAgent(id) {
+            if (confirm("Delete this agent and all its tunnels?")) {
+                await fetch(`/api/agents/${id}`, { method: 'DELETE' });
+                loadData();
             }
         }
 
-        async function rejectRequest(id) {
-            if(confirm('Reject this request?')) {
-                await fetch(`/api/requests/${id}/reject`, { method: 'POST' });
-                fetchRequests();
-            }
+        function copyToken(token) {
+            navigator.clipboard.writeText(token);
+            alert("Token copied to clipboard!");
         }
 
-        function refreshData() {
-            fetchTunnels();
-            fetchRequests();
+        function copyText(text) {
+            navigator.clipboard.writeText(text);
+            alert(`Copied: ${text}`);
         }
 
-        refreshData();
-        setInterval(refreshData, 5000);
+        function escapeHtml(str) {
+            return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        loadData();
+        setInterval(loadData, 3000);
     </script>
 </body>
 </html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Device — tunnelit</title>
+    <style>
+        :root {
+            --bg: #0d0f12;
+            --surface: #161920;
+            --border: #272c38;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .logo { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 24px; }
+        .logo span { color: var(--primary); }
+
+        h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; color: #fff; }
+        p { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+
+        .code-box { background: #0f1218; border: 1px dashed var(--border); padding: 14px; border-radius: 10px; font-size: 24px; font-family: monospace; font-weight: 700; letter-spacing: 4px; color: #60a5fa; margin-bottom: 24px; }
+
+        .btn { width: 100%; background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.15s; }
+        .btn:hover { background: var(--primary-hover); }
+
+        .success-box { display: none; margin-top: 20px; padding: 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; color: #34d399; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">⚡ tunnel<span>it</span></div>
+        <h2>Link Device to Account</h2>
+        <p>A new agent on your computer wants to link with this tunnelit server.</p>
+        
+        <div class="code-box" id="code-display">------</div>
+
+        <button class="btn" id="claim-btn" onclick="claimAgent()">Link Device</button>
+
+        <div id="success-msg" class="success-box">
+            <b>✅ Device successfully linked!</b>
+            <p style="margin: 8px 0 16px; font-size: 13px;">Your agent terminal will now continue automatically.</p>
+            <a href="/" style="color: #60a5fa; text-decoration: none; font-weight: 600; font-size: 14px;">Go to Dashboard &rarr;</a>
+        </div>
+    </div>
+
+    <script>
+        const pathParts = window.location.pathname.split('/');
+        const code = pathParts[pathParts.length - 1];
+        document.getElementById('code-display').innerText = code;
+
+        async function claimAgent() {
+            const btn = document.getElementById('claim-btn');
+            btn.disabled = true;
+            btn.innerText = "Linking...";
+
+            try {
+                const res = await fetch(`/api/claim/${code}`, { method: 'POST' });
+                if (res.ok) {
+                    btn.style.display = 'none';
+                    document.getElementById('success-msg').style.display = 'block';
+                } else {
+                    const err = await res.text();
+                    alert("Claim failed: " + err);
+                    btn.disabled = false;
+                    btn.innerText = "Try Again";
+                }
+            } catch(e) {
+                alert("Network error: " + e);
+                btn.disabled = false;
+                btn.innerText = "Try Again";
+            }
+        }
+    </script>
+</body>
+</html>

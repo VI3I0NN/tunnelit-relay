@@ -6,45 +6,30 @@ use uuid::Uuid;
 
 use crate::protocol::RelayMessage;
 
-#[derive(Debug, Clone)]
-pub struct TunnelInfo {
-    pub id: Uuid,
-    pub agent_id: Uuid,
-    pub local_port: u16,
-    pub protocol: String,
-    pub public_port: u16,
-    pub created_at: i64,
-}
-
-#[derive(Debug, Clone)]
-pub struct ConnectionInfo {
-    pub id: Uuid,
-    pub tunnel_id: Uuid,
-    pub agent_id: Uuid,
-}
-
 pub struct AppState {
-    pub tunnels: Arc<RwLock<HashMap<Uuid, TunnelInfo>>>,
-    pub connections: Arc<RwLock<HashMap<Uuid, ConnectionInfo>>>,
-    pub agent_senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<RelayMessage>>>>,
-    pub tcp_conn_senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Vec<u8>>>>>,
+    pub db: Arc<Mutex<Connection>>,
     pub port_range: (u16, u16),
     pub allocated_ports: Arc<RwLock<HashSet<u16>>>,
+    // agent_id -> WS sender channel
+    pub agent_senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<RelayMessage>>>>,
+    // claim_code -> WS sender channel (for agents waiting for web claim confirmation)
+    pub pending_claims: Arc<RwLock<HashMap<String, mpsc::UnboundedSender<RelayMessage>>>>,
+    // conn_id -> TCP stream writer channel
+    pub tcp_conn_senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Vec<u8>>>>>,
+    // tunnel_id -> background task JoinHandle (to close socket on disable/disconnect)
     pub tunnel_tasks: Arc<RwLock<HashMap<Uuid, tokio::task::JoinHandle<()>>>>,
-    pub db: Arc<Mutex<Connection>>,
 }
 
 impl AppState {
     pub fn new(db_conn: Connection, port_range: (u16, u16)) -> Arc<Self> {
         Arc::new(Self {
-            tunnels: Arc::new(RwLock::new(HashMap::new())),
-            connections: Arc::new(RwLock::new(HashMap::new())),
-            agent_senders: Arc::new(RwLock::new(HashMap::new())),
-            tcp_conn_senders: Arc::new(RwLock::new(HashMap::new())),
+            db: Arc::new(Mutex::new(db_conn)),
             port_range,
             allocated_ports: Arc::new(RwLock::new(HashSet::new())),
+            agent_senders: Arc::new(RwLock::new(HashMap::new())),
+            pending_claims: Arc::new(RwLock::new(HashMap::new())),
+            tcp_conn_senders: Arc::new(RwLock::new(HashMap::new())),
             tunnel_tasks: Arc::new(RwLock::new(HashMap::new())),
-            db: Arc::new(Mutex::new(db_conn)),
         })
     }
 

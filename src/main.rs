@@ -11,6 +11,7 @@ mod tcp_proxy;
 mod udp_proxy;
 mod db;
 mod admin;
+mod tunnel_manager;
 
 use state::AppState;
 use ws_handler::ws_handler;
