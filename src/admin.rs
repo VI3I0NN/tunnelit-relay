@@ -279,16 +279,13 @@ async fn claim_agent(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let current_user_id = get_current_user_id(&headers, &state).await;
+    let current_user_id = get_current_user_id(&headers, &state).await
+        .ok_or((StatusCode::UNAUTHORIZED, "Registration or login is required to link devices"))?;
 
     let agent_record = {
         let db = state.db.lock().await;
-        if let Some(uid) = &current_user_id {
-            db::claim_agent_to_user(&db, &code, uid)
-        } else {
-            db::claim_agent_to_user(&db, &code, "default")
-        }
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error"))?
+        db::claim_agent_to_user(&db, &code, &current_user_id)
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error"))?
     };
 
     let agent = match agent_record {
@@ -341,14 +338,15 @@ async fn list_agents(
     let is_adm = is_admin(&headers, &state).await;
     let current_uid = get_current_user_id(&headers, &state).await;
 
+    if !is_adm && current_uid.is_none() {
+        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!([]))).into_response();
+    }
+
     let db = state.db.lock().await;
     let agents = if is_adm {
         db::list_all_agents(&db).unwrap_or_default()
-    } else if let Some(uid) = current_uid {
-        db::list_agents_for_user(&db, &uid).unwrap_or_default()
     } else {
-        // Unauthenticated fallback: list unassigned agents
-        db::list_all_agents(&db).unwrap_or_default()
+        db::list_agents_for_user(&db, current_uid.as_ref().unwrap()).unwrap_or_default()
     };
 
     (StatusCode::OK, Json(agents)).into_response()
@@ -401,17 +399,20 @@ async fn list_tunnels(
     let is_adm = is_admin(&headers, &state).await;
     let current_uid = get_current_user_id(&headers, &state).await;
 
+    if !is_adm && current_uid.is_none() {
+        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!([]))).into_response();
+    }
+
     let db = state.db.lock().await;
     let tunnels = if is_adm {
         db::list_all_tunnels(&db).unwrap_or_default()
-    } else if let Some(uid) = current_uid {
-        db::list_tunnels_for_user(&db, &uid).unwrap_or_default()
     } else {
-        db::list_all_tunnels(&db).unwrap_or_default()
+        db::list_tunnels_for_user(&db, current_uid.as_ref().unwrap()).unwrap_or_default()
     };
 
     (StatusCode::OK, Json(tunnels)).into_response()
 }
+
 
 #[derive(Deserialize)]
 struct CreateTunnelRequest {
@@ -419,6 +420,7 @@ struct CreateTunnelRequest {
     name: String,
     local_port: u16,
     protocol: String,
+    #[allow(dead_code)]
     preferred_port: Option<u16>,
     subdomain: Option<String>,
 }
@@ -428,7 +430,8 @@ async fn create_tunnel(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateTunnelRequest>,
 ) -> Result<Response, (StatusCode, String)> {
-    let current_uid = get_current_user_id(&headers, &state).await;
+    let current_uid = get_current_user_id(&headers, &state).await
+        .ok_or((StatusCode::UNAUTHORIZED, "Registration or sign in is required to create tunnels".into()))?;
 
     let agent_id = match Uuid::parse_str(&body.agent_id) {
         Ok(id) => id,
@@ -446,20 +449,18 @@ async fn create_tunnel(
         }
     }
 
-    // Determine port: if user has dedicated port and preferred_port not provided, use dedicated_port!
-    let mut desired_port = body.preferred_port;
-    if desired_port.is_none() {
-        if let Some(uid) = &current_uid {
-            let db = state.db.lock().await;
-            if let Ok(Some(u)) = db::get_user_by_id(&db, uid) {
-                desired_port = Some(u.dedicated_port);
-            }
-        }
-    }
+    // Force public remote port to strictly be the user's dedicated_port
+    let dedicated_port = {
+        let db = state.db.lock().await;
+        let user = db::get_user_by_id(&db, &current_uid)
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?
+            .ok_or((StatusCode::UNAUTHORIZED, "User account not found".into()))?;
+        user.dedicated_port
+    };
 
-    let public_port = match state.allocate_port(desired_port).await {
-        Some(p) => p,
-        None => return Err((StatusCode::CONFLICT, "Requested port is already in use or unavailable".into())),
+    let public_port = match state.allocate_port(Some(dedicated_port)).await {
+        Some(p) if p == dedicated_port => p,
+        _ => return Err((StatusCode::CONFLICT, format!("Ваш выделенный порт :{} уже используется другим активным туннелем. Отключите или удалите его.", dedicated_port))),
     };
 
     let clean_subdomain = body.subdomain.as_deref().map(|s| s.trim()).filter(|s| !s.is_empty());
@@ -469,7 +470,7 @@ async fn create_tunnel(
         db::create_tunnel(
             &db,
             &body.agent_id,
-            current_uid.as_deref(),
+            Some(&current_uid),
             &body.name,
             body.local_port,
             &body.protocol,

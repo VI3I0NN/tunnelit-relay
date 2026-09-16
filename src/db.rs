@@ -421,7 +421,7 @@ pub fn create_tunnel(
 
     conn.execute(
         "INSERT INTO tunnels (id, agent_id, user_id, name, local_port, protocol, public_port, subdomain, enabled, bytes_in, bytes_out, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, 0, 0, ?8)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, 0, 0, ?9)",
         params![id, agent_id, user_id, name, local_port, protocol, public_port, subdomain, now],
     )?;
 

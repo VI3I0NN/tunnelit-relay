@@ -105,42 +105,57 @@
             </div>
         </header>
 
-        <!-- USER DEDICATED INFO BANNER -->
-        <div id="user-banner" style="display: none; background: #131722; border: 1px solid #1e293b; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <div>
-                    <span style="font-size: 12px; color: var(--text-muted); display: block;">Your Dedicated Server Port</span>
-                    <span class="badge-port" id="dedicated-port-display">:00000</span>
-                </div>
-                <div style="font-size: 13px; color: #94a3b8;">
-                    This public port is permanently reserved for your account!
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-secondary btn-sm" onclick="openQuickLauncherModal()">⚡ 1-Click Лаунчер</button>
-                <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
-                <button class="btn btn-sm" onclick="openCreateModal()">+ New Tunnel</button>
+        <!-- GUEST BARRIER (Registration Mandatory) -->
+        <div id="guest-barrier" style="display: none; text-align: center; padding: 48px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; max-width: 500px; margin: 40px auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
+            <div style="font-size: 40px; margin-bottom: 12px;">🔒</div>
+            <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 10px; color: #fff;">Требуется регистрация</h2>
+            <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+                Для создания туннелей и использования сервиса необходима учетная запись. При регистрации за вами навсегда закрепляется личный выделенный порт!
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button class="btn" style="flex: 1;" onclick="openAuthModal('reg')">Регистрация (Получить порт)</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="openAuthModal('login')">Войти</button>
             </div>
         </div>
 
-        <!-- AGENTS SECTION (Feature 4: Multi-Agent) -->
-        <div class="section-header">
-            <div class="section-title">Connected Devices (Multi-Agents)</div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary btn-sm" onclick="openQuickLauncherModal()">⚡ 1-Click Лаунчер</button>
-                <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
+        <div id="dashboard-content" style="display: none;">
+            <!-- USER DEDICATED INFO BANNER -->
+            <div id="user-banner" style="display: flex; background: #131722; border: 1px solid #1e293b; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div>
+                        <span style="font-size: 12px; color: var(--text-muted); display: block;">Your Dedicated Server Port</span>
+                        <span class="badge-port" id="dedicated-port-display">:00000</span>
+                    </div>
+                    <div style="font-size: 13px; color: #94a3b8;">
+                        This public port is permanently reserved for your account!
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary btn-sm" onclick="openQuickLauncherModal()">⚡ 1-Click Лаунчер</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
+                    <button class="btn btn-sm" onclick="openCreateModal()">+ New Tunnel</button>
+                </div>
             </div>
-        </div>
-        <div id="agents-grid" class="grid">
-            <!-- Dynamically populated -->
-        </div>
 
-        <!-- TUNNELS SECTION (Feature 1: Telemetry, Feature 2: SRV Generator) -->
-        <div class="section-header">
-            <div class="section-title">Active Tunnels</div>
-        </div>
-        <div id="tunnels-grid" class="grid">
-            <!-- Dynamically populated -->
+            <!-- AGENTS SECTION (Feature 4: Multi-Agent) -->
+            <div class="section-header">
+                <div class="section-title">Connected Devices (Multi-Agents)</div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="openQuickLauncherModal()">⚡ 1-Click Лаунчер</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
+                </div>
+            </div>
+            <div id="agents-grid" class="grid">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- TUNNELS SECTION (Feature 1: Telemetry, Feature 2: SRV Generator) -->
+            <div class="section-header">
+                <div class="section-title">Active Tunnels</div>
+            </div>
+            <div id="tunnels-grid" class="grid">
+                <!-- Dynamically populated -->
+            </div>
         </div>
     </div>
 
@@ -284,8 +299,9 @@
                 </div>
             </div>
             <div class="form-group">
-                <label class="form-label">Public Remote Port (Default: Your dedicated port)</label>
-                <input id="t-public" type="number" class="form-input" placeholder="Auto / Dedicated">
+                <label class="form-label">Public Remote Port (Ваш выделенный порт)</label>
+                <input id="t-public" type="text" class="form-input" readonly disabled style="background: #181d28; color: #60a5fa; font-weight: 700; cursor: not-allowed;">
+                <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">🔒 Закреплен за вашей учетной записью при регистрации (изменить нельзя)</span>
             </div>
             <div class="form-group">
                 <label class="form-label">Subdomain (e.g. mc1)</label>
@@ -373,7 +389,8 @@
                             </div>
                             <button class="btn btn-secondary btn-sm" onclick="logout()">Logout</button>
                         `;
-                        banner.style.display = 'flex';
+                        document.getElementById('dashboard-content').style.display = 'block';
+                        document.getElementById('guest-barrier').style.display = 'none';
                         document.getElementById('dedicated-port-display').innerText = `:${currentUser.dedicated_port}`;
                         return;
                     }
@@ -382,7 +399,8 @@
 
             // Not logged in
             currentUser = null;
-            banner.style.display = 'none';
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('guest-barrier').style.display = 'block';
             controls.innerHTML = `
                 <button class="btn btn-sm" onclick="openAuthModal('login')">Sign In</button>
                 <button class="btn btn-secondary btn-sm" onclick="openAuthModal('reg')">Register</button>
@@ -390,6 +408,7 @@
         }
 
         async function loadData() {
+            if (!currentUser) return;
             try {
                 const [agentsRes, tunnelsRes] = await Promise.all([
                     fetch('/api/agents', { headers: getAuthHeaders() }),
