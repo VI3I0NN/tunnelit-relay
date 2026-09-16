@@ -66,6 +66,7 @@ pub async fn run_udp_proxy(
                             id
                         });
                         
+                        state.record_traffic(tunnel_id, len as u64, 0).await;
                         let payload = general_purpose::STANDARD.encode(&buf[..len]);
                         let _ = agent_sender.send(RelayMessage::Data {
                             conn_id,
@@ -79,6 +80,7 @@ pub async fn run_udp_proxy(
             }
             Some((conn_id, data)) = rx.recv() => {
                 if let Some(addr) = conn_to_addr.get(&conn_id) {
+                    state.record_traffic(tunnel_id, 0, data.len() as u64).await;
                     let _ = socket.send_to(&data, addr).await;
                 }
             }

@@ -1,11 +1,11 @@
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
+    extract::{Path, Query, State},
+    http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::{delete, get, post},
     Json, Router,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 use tracing::info;
@@ -16,6 +16,7 @@ use crate::state::AppState;
 use crate::tunnel_manager::{start_tunnel_listener, stop_tunnel_listener};
 use crate::ws_handler::sync_agent_tunnels;
 
+const ADMIN_PASSWORD: &str = "09090912Qw_";
 const ADMIN_HTML: &str = include_str!("admin.html");
 const CLAIM_HTML: &str = include_str!("claim.html");
 
@@ -24,11 +25,26 @@ pub fn admin_routes() -> Router<Arc<AppState>> {
         .route("/", get(serve_admin_page))
         .route("/claim/:code", get(serve_claim_page))
         .route("/api/claim/:code", post(claim_agent))
+        // Auth
+        .route("/api/auth/register", post(register))
+        .route("/api/auth/login", post(login))
+        .route("/api/auth/me", get(get_me))
+        .route("/api/auth/logout", post(logout))
+        // Admin Master Auth
+        .route("/api/admin/login", post(admin_login))
+        .route("/api/admin/users", get(admin_list_users))
+        .route("/api/admin/users/:id/ban", post(admin_ban_user))
+        .route("/api/admin/users/:id/unban", post(admin_unban_user))
+        // Agents & Tunnels
         .route("/api/agents", get(list_agents))
         .route("/api/agents/:id", delete(delete_agent))
         .route("/api/tunnels", get(list_tunnels).post(create_tunnel))
         .route("/api/tunnels/:id", delete(delete_tunnel).put(update_tunnel))
         .route("/api/tunnels/:id/toggle", post(toggle_tunnel))
+        // Telemetry & 1-Click Launchers
+        .route("/api/stats", get(get_live_stats))
+        .route("/api/scripts/launcher.sh", get(get_launcher_sh))
+        .route("/api/scripts/launcher.bat", get(get_launcher_bat))
 }
 
 async fn serve_admin_page() -> Html<&'static str> {
@@ -39,14 +55,238 @@ async fn serve_claim_page() -> Html<&'static str> {
     Html(CLAIM_HTML)
 }
 
+// Helpers to extract user_id or admin from headers
+async fn get_current_user_id(headers: &HeaderMap, state: &AppState) -> Option<String> {
+    let token = extract_token(headers)?;
+    let sessions = state.user_sessions.read().await;
+    sessions.get(&token).cloned()
+}
+
+async fn is_admin(headers: &HeaderMap, state: &AppState) -> bool {
+    if let Some(token) = extract_token(headers) {
+        let admins = state.admin_sessions.read().await;
+        admins.contains(&token)
+    } else {
+        false
+    }
+}
+
+fn extract_token(headers: &HeaderMap) -> Option<String> {
+    if let Some(val) = headers.get("authorization") {
+        if let Ok(s) = val.to_str() {
+            if s.starts_with("Bearer ") {
+                return Some(s[7..].trim().to_string());
+            }
+        }
+    }
+    if let Some(val) = headers.get("x-session-token") {
+        if let Ok(s) = val.to_str() {
+            return Some(s.trim().to_string());
+        }
+    }
+    None
+}
+
+// -------------------------------------------------------------
+// AUTH ENDPOINTS
+// -------------------------------------------------------------
+
+#[derive(Deserialize)]
+struct AuthRequest {
+    username: String,
+    password: String,
+}
+
+#[derive(Serialize)]
+struct AuthResponse {
+    token: String,
+    user: db::UserRecord,
+}
+
+async fn register(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<AuthRequest>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let username = body.username.trim();
+    if username.len() < 3 {
+        return Err((StatusCode::BAD_REQUEST, "Username must be at least 3 characters".into()));
+    }
+    if body.password.len() < 6 {
+        return Err((StatusCode::BAD_REQUEST, "Password must be at least 6 characters".into()));
+    }
+
+    let user = {
+        let db = state.db.lock().await;
+        db::register_user(&db, username, &body.password, state.port_range)
+            .map_err(|e| (StatusCode::CONFLICT, format!("Registration failed (username might be taken): {}", e)))?
+    };
+
+    let session_token = format!("usr_{}", Uuid::new_v4().to_string().replace('-', ""));
+    {
+        let mut sessions = state.user_sessions.write().await;
+        sessions.insert(session_token.clone(), user.id.clone());
+    }
+
+    Ok((StatusCode::CREATED, Json(AuthResponse {
+        token: session_token,
+        user,
+    })))
+}
+
+async fn login(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<AuthRequest>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let user_opt = {
+        let db = state.db.lock().await;
+        db::verify_user(&db, body.username.trim(), &body.password)
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?
+    };
+
+    let user = match user_opt {
+        Some(u) => {
+            if u.is_banned {
+                return Err((StatusCode::FORBIDDEN, "This account is suspended".into()));
+            }
+            u
+        }
+        None => return Err((StatusCode::UNAUTHORIZED, "Invalid username or password".into())),
+    };
+
+    let session_token = format!("usr_{}", Uuid::new_v4().to_string().replace('-', ""));
+    {
+        let mut sessions = state.user_sessions.write().await;
+        sessions.insert(session_token.clone(), user.id.clone());
+    }
+
+    Ok((StatusCode::OK, Json(AuthResponse {
+        token: session_token,
+        user,
+    })))
+}
+
+async fn get_me(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let user_id = get_current_user_id(&headers, &state).await
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".into()))?;
+
+    let db = state.db.lock().await;
+    let user = db::get_user_by_id(&db, &user_id)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?
+        .ok_or((StatusCode::NOT_FOUND, "User not found".into()))?;
+
+    Ok((StatusCode::OK, Json(user)))
+}
+
+async fn logout(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    if let Some(token) = extract_token(&headers) {
+        let mut sessions = state.user_sessions.write().await;
+        sessions.remove(&token);
+    }
+    StatusCode::OK
+}
+
+// -------------------------------------------------------------
+// MASTER ADMIN ENDPOINTS (Password: 09090912Qw_)
+// -------------------------------------------------------------
+
+#[derive(Deserialize)]
+struct AdminLoginRequest {
+    password: String,
+}
+
+async fn admin_login(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<AdminLoginRequest>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    if body.password == ADMIN_PASSWORD {
+        let token = format!("adm_{}", Uuid::new_v4().to_string().replace('-', ""));
+        let mut admins = state.admin_sessions.write().await;
+        admins.insert(token.clone());
+        Ok((StatusCode::OK, Json(serde_json::json!({ "token": token }))))
+    } else {
+        Err((StatusCode::UNAUTHORIZED, "Invalid master admin password".into()))
+    }
+}
+
+async fn admin_list_users(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    if !is_admin(&headers, &state).await {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    let db = state.db.lock().await;
+    let users = db::list_all_users(&db)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    Ok((StatusCode::OK, Json(users)))
+}
+
+async fn admin_ban_user(
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    if !is_admin(&headers, &state).await {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    let db = state.db.lock().await;
+    let _ = db::toggle_user_ban(&db, &id, true);
+
+    // Stop all tunnels of banned user
+    let tunnels = db::list_tunnels_for_user(&db, &id).unwrap_or_default();
+    for t in tunnels {
+        if let Ok(tid) = Uuid::parse_str(&t.id) {
+            stop_tunnel_listener(tid, state.clone()).await;
+            state.free_port(t.public_port).await;
+        }
+    }
+
+    Ok(StatusCode::OK)
+}
+
+async fn admin_unban_user(
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    if !is_admin(&headers, &state).await {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    let db = state.db.lock().await;
+    let _ = db::toggle_user_ban(&db, &id, false);
+
+    Ok(StatusCode::OK)
+}
+
+// -------------------------------------------------------------
+// CLAIM AGENT (Linked to Current User if logged in)
+// -------------------------------------------------------------
+
 async fn claim_agent(
     Path(code): Path<String>,
+    headers: HeaderMap,
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
+    let current_user_id = get_current_user_id(&headers, &state).await;
+
     let agent_record = {
         let db = state.db.lock().await;
-        db::claim_agent_by_code(&db, &code)
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error"))?
+        if let Some(uid) = &current_user_id {
+            db::claim_agent_to_user(&db, &code, uid)
+        } else {
+            db::claim_agent_to_user(&db, &code, "default")
+        }
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error"))?
     };
 
     let agent = match agent_record {
@@ -59,46 +299,57 @@ async fn claim_agent(
         Err(_) => return Err((StatusCode::INTERNAL_SERVER_ERROR, "Invalid agent ID")),
     };
 
-    // If the agent is currently connected and waiting for this claim code:
     let waiting_sender = {
         let mut pending = state.pending_claims.write().await;
         pending.remove(&code)
     };
 
     if let Some(sender) = waiting_sender {
-        info!("Claim confirmed on web! Authenticating waiting agent '{}'", agent.name);
-        // Mark online in DB
+        info!("Claim confirmed! Authenticating agent '{}'", agent.name);
         {
             let db = state.db.lock().await;
             let _ = db::set_agent_online(&db, &agent.id, true, None);
         }
 
-        // Register in active senders
         {
             let mut senders = state.agent_senders.write().await;
             senders.insert(agent_id, sender.clone());
         }
 
-        // Send AuthSuccess to agent so it knows its permanent token!
         let _ = sender.send(RelayMessage::AuthSuccess {
             agent_id,
             name: agent.name.clone(),
             token: agent.token.clone(),
         });
 
-        // Sync tunnels
         sync_agent_tunnels(agent_id, state.clone(), sender).await;
     }
 
     Ok((StatusCode::OK, "Agent claimed successfully"))
 }
 
-async fn list_agents(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+// -------------------------------------------------------------
+// AGENTS & TUNNELS
+// -------------------------------------------------------------
+
+async fn list_agents(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    let is_adm = is_admin(&headers, &state).await;
+    let current_uid = get_current_user_id(&headers, &state).await;
+
     let db = state.db.lock().await;
-    match db::list_agents(&db) {
-        Ok(agents) => (StatusCode::OK, Json(agents)).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load agents").into_response(),
-    }
+    let agents = if is_adm {
+        db::list_all_agents(&db).unwrap_or_default()
+    } else if let Some(uid) = current_uid {
+        db::list_agents_for_user(&db, &uid).unwrap_or_default()
+    } else {
+        // Unauthenticated fallback: list unassigned agents
+        db::list_all_agents(&db).unwrap_or_default()
+    };
+
+    (StatusCode::OK, Json(agents)).into_response()
 }
 
 async fn delete_agent(
@@ -106,7 +357,6 @@ async fn delete_agent(
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     if let Ok(agent_id) = Uuid::parse_str(&id) {
-        // Disconnect if online
         let mut senders = state.agent_senders.write().await;
         if let Some(sender) = senders.remove(&agent_id) {
             let _ = sender.send(RelayMessage::Error {
@@ -120,12 +370,23 @@ async fn delete_agent(
     StatusCode::OK
 }
 
-async fn list_tunnels(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+async fn list_tunnels(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    let is_adm = is_admin(&headers, &state).await;
+    let current_uid = get_current_user_id(&headers, &state).await;
+
     let db = state.db.lock().await;
-    match db::list_all_tunnels(&db) {
-        Ok(tunnels) => (StatusCode::OK, Json(tunnels)).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load tunnels").into_response(),
-    }
+    let tunnels = if is_adm {
+        db::list_all_tunnels(&db).unwrap_or_default()
+    } else if let Some(uid) = current_uid {
+        db::list_tunnels_for_user(&db, &uid).unwrap_or_default()
+    } else {
+        db::list_all_tunnels(&db).unwrap_or_default()
+    };
+
+    (StatusCode::OK, Json(tunnels)).into_response()
 }
 
 #[derive(Deserialize)]
@@ -139,27 +400,42 @@ struct CreateTunnelRequest {
 }
 
 async fn create_tunnel(
+    headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateTunnelRequest>,
 ) -> Result<Response, (StatusCode, String)> {
+    let current_uid = get_current_user_id(&headers, &state).await;
+
     let agent_id = match Uuid::parse_str(&body.agent_id) {
         Ok(id) => id,
         Err(_) => return Err((StatusCode::BAD_REQUEST, "Invalid agent ID".into())),
     };
 
+    // Subdomain uniqueness
     if let Some(sub) = &body.subdomain {
         let clean = sub.trim();
         if !clean.is_empty() {
             let db = state.db.lock().await;
             if db::is_subdomain_taken(&db, clean, None).unwrap_or(false) {
-                return Err((StatusCode::CONFLICT, format!("Subdomain '{}' is already in use by another tunnel", clean)));
+                return Err((StatusCode::CONFLICT, format!("Subdomain '{}' is already in use", clean)));
             }
         }
     }
 
-    let public_port = match state.allocate_port(body.preferred_port).await {
+    // Determine port: if user has dedicated port and preferred_port not provided, use dedicated_port!
+    let mut desired_port = body.preferred_port;
+    if desired_port.is_none() {
+        if let Some(uid) = &current_uid {
+            let db = state.db.lock().await;
+            if let Ok(Some(u)) = db::get_user_by_id(&db, uid) {
+                desired_port = Some(u.dedicated_port);
+            }
+        }
+    }
+
+    let public_port = match state.allocate_port(desired_port).await {
         Some(p) => p,
-        None => return Err((StatusCode::CONFLICT, "No ports available or requested port is already in use".into())),
+        None => return Err((StatusCode::CONFLICT, "Requested port is already in use or unavailable".into())),
     };
 
     let clean_subdomain = body.subdomain.as_deref().map(|s| s.trim()).filter(|s| !s.is_empty());
@@ -169,6 +445,7 @@ async fn create_tunnel(
         db::create_tunnel(
             &db,
             &body.agent_id,
+            current_uid.as_deref(),
             &body.name,
             body.local_port,
             &body.protocol,
@@ -194,7 +471,6 @@ async fn create_tunnel(
         enabled: true,
     };
 
-    // If agent is online, start listener and notify agent
     let senders = state.agent_senders.read().await;
     if let Some(agent_sender) = senders.get(&agent_id) {
         let _ = start_tunnel_listener(&config, agent_sender.clone(), state.clone()).await;
@@ -235,7 +511,7 @@ async fn update_tunnel(
     if let Some(sub) = clean_sub {
         let db = state.db.lock().await;
         if db::is_subdomain_taken(&db, sub, Some(&id)).unwrap_or(false) {
-            return Err((StatusCode::CONFLICT, format!("Subdomain '{}' is already taken by another tunnel", sub)));
+            return Err((StatusCode::CONFLICT, format!("Subdomain '{}' is already taken", sub)));
         }
     }
 
@@ -245,7 +521,6 @@ async fn update_tunnel(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
     }
 
-    // Sync with agent
     if let Ok(agent_id) = Uuid::parse_str(&tunnel.agent_id) {
         let senders = state.agent_senders.read().await;
         if let Some(sender) = senders.get(&agent_id) {
@@ -292,7 +567,6 @@ async fn toggle_tunnel(
     let agent_sender_opt = senders.get(&agent_id);
 
     if new_enabled {
-        // Turning ON
         let mut allocated = state.allocated_ports.write().await;
         allocated.insert(tunnel.public_port);
 
@@ -312,7 +586,6 @@ async fn toggle_tunnel(
             let _ = agent_sender.send(RelayMessage::StartTunnel { tunnel: config });
         }
     } else {
-        // Turning OFF
         stop_tunnel_listener(tunnel_id, state.clone()).await;
         state.free_port(tunnel.public_port).await;
 
@@ -352,4 +625,79 @@ async fn delete_tunnel(
     }
 
     Ok(StatusCode::OK)
+}
+
+// -------------------------------------------------------------
+// TELEMETRY & 1-CLICK LAUNCHERS
+// -------------------------------------------------------------
+
+async fn get_live_stats(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    let traffic = state.live_traffic.read().await;
+    let mut map = std::collections::HashMap::new();
+    for (k, v) in traffic.iter() {
+        map.insert(k.to_string(), serde_json::json!({
+            "bytes_in": v.0,
+            "bytes_out": v.1,
+            "total_mb": ((v.0 + v.1) as f64) / (1024.0 * 1024.0)
+        }));
+    }
+    Json(map)
+}
+
+#[derive(Deserialize)]
+struct ScriptQuery {
+    token: Option<String>,
+}
+
+async fn get_launcher_sh(
+    Query(query): Query<ScriptQuery>,
+) -> impl IntoResponse {
+    let token = query.token.unwrap_or_else(|| "YOUR_TOKEN_HERE".into());
+    let script = format!(
+r#"#!/bin/bash
+set -e
+echo "⚡ Downloading tunnelit-agent..."
+mkdir -p "$HOME/.tunnelit"
+curl -sSL "https://github.com/visionn1488/tunnelit-agent/releases/download/latest/tunnelit-agent-linux-amd64" -o "$HOME/.tunnelit/tunnelit-agent"
+chmod +x "$HOME/.tunnelit/tunnelit-agent"
+
+echo "🚀 Starting tunnelit-agent..."
+"$HOME/.tunnelit/tunnelit-agent" --token "{}" --relay "wss://ws.ezbchat.fun/ws"
+"#,
+        token
+    );
+
+    (
+        [
+            ("content-type", "text/x-shellscript"),
+            ("content-disposition", "attachment; filename=\"launch-tunnelit.sh\""),
+        ],
+        script,
+    )
+}
+
+async fn get_launcher_bat(
+    Query(query): Query<ScriptQuery>,
+) -> impl IntoResponse {
+    let token = query.token.unwrap_or_else(|| "YOUR_TOKEN_HERE".into());
+    let script = format!(
+r#"@echo off
+echo ⚡ Downloading tunnelit-agent for Windows...
+powershell -Command "Invoke-WebRequest -Uri 'https://github.com/visionn1488/tunnelit-agent/releases/download/latest/tunnelit-agent-windows-amd64.exe' -OutFile 'tunnelit-agent.exe'"
+echo 🚀 Starting tunnelit-agent...
+tunnelit-agent.exe --token "{}" --relay "wss://ws.ezbchat.fun/ws"
+pause
+"#,
+        token
+    );
+
+    (
+        [
+            ("content-type", "text/plain"),
+            ("content-disposition", "attachment; filename=\"launch-tunnelit.bat\""),
+        ],
+        script,
+    )
 }

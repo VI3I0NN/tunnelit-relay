@@ -59,6 +59,7 @@ pub async fn run_tcp_proxy(
                                         break;
                                     }
                                     Ok(n) => {
+                                        state_clone.record_traffic(tunnel_id, n as u64, 0).await;
                                         let payload = general_purpose::STANDARD.encode(&buf[..n]);
                                         if let Err(e) = agent_sender_clone.send(RelayMessage::Data {
                                             conn_id,
@@ -75,6 +76,7 @@ pub async fn run_tcp_proxy(
                                 }
                             }
                             Some(data) = rx.recv() => {
+                                state_clone.record_traffic(tunnel_id, 0, data.len() as u64).await;
                                 if let Err(e) = write_half.write_all(&data).await {
                                     error!("Error writing to TCP stream: {}", e);
                                     break;

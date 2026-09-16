@@ -15,37 +15,42 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
+            --purple: #8b5cf6;
             --text: #f3f4f6;
             --text-muted: #9ca3af;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; }
-        .container { max-width: 1100px; margin: 0 auto; }
+        body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1150px; margin: 0 auto; }
 
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px; }
         .logo { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; color: #fff; }
         .logo span { color: var(--primary); }
 
-        .btn { background: var(--primary); color: #fff; border: none; padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn { background: var(--primary); color: #fff; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
         .btn:hover { background: var(--primary-hover); }
         .btn-secondary { background: var(--surface-hover); color: var(--text); border: 1px solid var(--border); }
         .btn-secondary:hover { background: #282e3b; }
         .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
         .btn-danger:hover { background: var(--danger); color: #fff; }
+        .btn-purple { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); }
+        .btn-purple:hover { background: var(--purple); color: #fff; }
         .btn-sm { padding: 5px 10px; font-size: 12px; }
 
         .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .badge-tcp { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
         .badge-udp { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .badge-port { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; font-family: monospace; font-size: 13px; border-radius: 8px; }
+
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
         .dot-online { background: var(--success); box-shadow: 0 0 8px var(--success); }
         .dot-offline { background: #6b7280; }
 
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin: 32px 0 16px; }
-        .section-title { font-size: 18px; font-weight: 700; color: #fff; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin: 28px 0 14px; }
+        .section-title { font-size: 17px; font-weight: 700; color: #fff; }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; transition: border-color 0.2s; position: relative; }
         .card:hover { border-color: #3b4252; }
 
@@ -55,50 +60,78 @@
         .card-footer { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 
         .copy-box { background: #0f1218; border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 13px; color: #60a5fa; display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
-        .copy-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; }
+        .copy-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; font-weight: 600; }
         .copy-btn:hover { color: #fff; }
 
+        .stats-pill { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; background: #0f1218; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); margin-top: 8px; }
+
         /* Modal */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
-        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 460px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
-        .form-group { margin-bottom: 16px; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 480px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #fff; }
+        .form-group { margin-bottom: 14px; }
         .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
         .form-input, .form-select { width: 100%; background: #0f1218; border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; color: #fff; font-size: 14px; }
         .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary); }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
         /* Switch */
-        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; inset: 0; background-color: #374151; border-radius: 24px; transition: .2s; }
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .2s; }
         input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        input:checked + .slider:before { transform: translateX(18px); }
 
-        .empty-state { text-align: center; padding: 40px 20px; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted); }
-        .empty-state p { margin-top: 8px; font-size: 14px; }
+        .empty-state { text-align: center; padding: 36px 20px; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted); }
         .code-snippet { background: #0f1218; border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; font-family: monospace; display: inline-block; margin-top: 12px; color: #34d399; font-size: 13px; }
+
+        /* Auth Bar */
+        .auth-bar { display: flex; align-items: center; gap: 12px; }
+        .user-pill { font-size: 13px; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 600; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="logo">⚡ tunnel<span>it</span></div>
-            <div>
-                <button class="btn" onclick="openCreateModal()">+ New Tunnel</button>
+            <div class="auth-bar" id="auth-controls">
+                <!-- Populated dynamically: Login/Register OR User profile -->
             </div>
         </header>
 
-        <!-- AGENTS SECTION -->
+        <!-- USER DEDICATED INFO BANNER -->
+        <div id="user-banner" style="display: none; background: #131722; border: 1px solid #1e293b; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div>
+                    <span style="font-size: 12px; color: var(--text-muted); display: block;">Your Dedicated Server Port</span>
+                    <span class="badge-port" id="dedicated-port-display">:00000</span>
+                </div>
+                <div style="font-size: 13px; color: #94a3b8;">
+                    This public port is permanently reserved for your account!
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="downloadLauncher('sh')">📥 1-Click Launch (.sh)</button>
+                <button class="btn btn-secondary btn-sm" onclick="downloadLauncher('bat')">📥 Windows (.bat)</button>
+                <button class="btn btn-sm" onclick="openCreateModal()">+ New Tunnel</button>
+            </div>
+        </div>
+
+        <!-- AGENTS SECTION (Feature 4: Multi-Agent) -->
         <div class="section-header">
-            <div class="section-title">Connected Devices (Agents)</div>
+            <div class="section-title">Connected Devices (Multi-Agents)</div>
         </div>
         <div id="agents-grid" class="grid">
             <!-- Dynamically populated -->
         </div>
 
-        <!-- TUNNELS SECTION -->
+        <!-- TUNNELS SECTION (Feature 1: Telemetry, Feature 2: SRV Generator) -->
         <div class="section-header">
             <div class="section-title">Active Tunnels</div>
         </div>
@@ -107,12 +140,68 @@
         </div>
     </div>
 
+    <!-- AUTH MODAL (Login / Register) -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="modal">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                <button id="tab-login" class="btn btn-sm" onclick="switchAuthTab('login')">Sign In</button>
+                <button id="tab-reg" class="btn btn-secondary btn-sm" onclick="switchAuthTab('reg')">Create Account</button>
+            </div>
+            <div class="modal-title" id="auth-modal-title">Sign In to tunnelit</div>
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input id="auth-user" type="text" class="form-input" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input id="auth-pass" type="password" class="form-input" placeholder="Enter password (min 6 chars)">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeAuthModal()">Cancel</button>
+                <button class="btn" id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MASTER ADMIN MODAL (Feature 9) -->
+    <div id="admin-modal" class="modal-overlay">
+        <div class="modal" style="max-width: 720px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div class="modal-title" style="margin-bottom: 0;">👑 Master Admin Panel</div>
+                <button class="btn btn-secondary btn-sm" onclick="closeAdminModal()">Close</button>
+            </div>
+            <div id="admin-login-box">
+                <div class="form-group">
+                    <label class="form-label">Master Admin Password</label>
+                    <input id="admin-pass" type="password" class="form-input" placeholder="Enter master password">
+                </div>
+                <button class="btn" onclick="submitAdminLogin()">Authenticate as Master Admin</button>
+            </div>
+            <div id="admin-content-box" style="display: none;">
+                <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Registered Users & Dedicated Ports</div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Dedicated Port</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- CREATE TUNNEL MODAL -->
     <div id="create-modal" class="modal-overlay">
         <div class="modal">
-            <div class="modal-title">Create Tunnel</div>
+            <div class="modal-title">Create New Tunnel</div>
             <div class="form-group">
-                <label class="form-label">Target Agent</label>
+                <label class="form-label">Target Device (Agent)</label>
                 <select id="t-agent" class="form-select"></select>
             </div>
             <div class="form-group">
@@ -133,12 +222,12 @@
                 </div>
             </div>
             <div class="form-group">
-                <label class="form-label">Public Remote Port (Optional, leave blank for auto)</label>
-                <input id="t-public" type="number" class="form-input" placeholder="e.g. 7777">
+                <label class="form-label">Public Remote Port (Default: Your dedicated port)</label>
+                <input id="t-public" type="number" class="form-input" placeholder="Auto / Dedicated">
             </div>
             <div class="form-group">
-                <label class="form-label">Subdomain (Optional)</label>
-                <input id="t-subdomain" type="text" class="form-input" placeholder="e.g. b543kjb">
+                <label class="form-label">Subdomain (e.g. mc1)</label>
+                <input id="t-subdomain" type="text" class="form-input" placeholder="e.g. mc1">
             </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
@@ -181,14 +270,65 @@
     </div>
 
     <script>
+        let currentUser = null;
+        let sessionToken = localStorage.getItem('tunnelit_session');
+        let adminToken = localStorage.getItem('tunnelit_admin_token');
         let agents = [];
         let tunnels = [];
+        let liveStats = {};
+        let authMode = 'login';
+
+        function getAuthHeaders() {
+            const h = { 'Content-Type': 'application/json' };
+            if (sessionToken) h['Authorization'] = `Bearer ${sessionToken}`;
+            if (adminToken) h['x-session-token'] = adminToken;
+            return h;
+        }
+
+        async function init() {
+            await checkAuth();
+            await loadData();
+            updateLiveStats();
+        }
+
+        async function checkAuth() {
+            const controls = document.getElementById('auth-controls');
+            const banner = document.getElementById('user-banner');
+
+            if (sessionToken) {
+                try {
+                    const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+                    if (res.ok) {
+                        currentUser = await res.json();
+                        controls.innerHTML = `
+                            <div class="user-pill">
+                                <span>👤 <b>${escapeHtml(currentUser.username)}</b></span>
+                            </div>
+                            <button class="btn btn-purple btn-sm" onclick="openAdminModal()">👑 Master Admin</button>
+                            <button class="btn btn-secondary btn-sm" onclick="logout()">Logout</button>
+                        `;
+                        banner.style.display = 'flex';
+                        document.getElementById('dedicated-port-display').innerText = `:${currentUser.dedicated_port}`;
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            // Not logged in
+            currentUser = null;
+            banner.style.display = 'none';
+            controls.innerHTML = `
+                <button class="btn btn-secondary btn-sm" onclick="openAdminModal()">👑 Admin</button>
+                <button class="btn btn-sm" onclick="openAuthModal('login')">Sign In</button>
+                <button class="btn btn-secondary btn-sm" onclick="openAuthModal('reg')">Register</button>
+            `;
+        }
 
         async function loadData() {
             try {
                 const [agentsRes, tunnelsRes] = await Promise.all([
-                    fetch('/api/agents'),
-                    fetch('/api/tunnels')
+                    fetch('/api/agents', { headers: getAuthHeaders() }),
+                    fetch('/api/tunnels', { headers: getAuthHeaders() })
                 ]);
                 agents = await agentsRes.json();
                 tunnels = await tunnelsRes.json();
@@ -200,13 +340,23 @@
             }
         }
 
+        async function updateLiveStats() {
+            try {
+                const res = await fetch('/api/stats');
+                if (res.ok) {
+                    liveStats = await res.json();
+                    renderTunnels();
+                }
+            } catch(e) {}
+        }
+
         function renderAgents() {
             const container = document.getElementById('agents-grid');
             if (!agents || agents.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state" style="grid-column: 1 / -1;">
-                        <h3>No agents connected yet</h3>
-                        <p>To connect your computer, run this command in terminal:</p>
+                        <h3>No devices linked yet</h3>
+                        <p>Link a computer using the 1-Click Launch script above or run in terminal:</p>
                         <div class="code-snippet">tunnelit-agent</div>
                     </div>
                 `;
@@ -242,17 +392,18 @@
                 container.innerHTML = `
                     <div class="empty-state" style="grid-column: 1 / -1;">
                         <h3>No tunnels configured</h3>
-                        <p>Click "New Tunnel" above to forward a local port!</p>
+                        <p>Click "+ New Tunnel" to route your server into the world!</p>
                     </div>
                 `;
                 return;
             }
 
             container.innerHTML = tunnels.map(t => {
-                let baseDomain = window.location.hostname;
-                baseDomain = baseDomain.replace(/^cabinet\./, '').replace(/^admin\./, '');
+                let baseDomain = window.location.hostname.replace(/^cabinet\./, '').replace(/^admin\./, '');
                 const publicAddr = `${baseDomain}:${t.public_port}`;
                 const subdomainAddr = t.subdomain ? `${t.subdomain}.${baseDomain}` : null;
+                const stats = liveStats[t.id] || { bytes_in: 0, bytes_out: 0, total_mb: 0 };
+                const mbTotal = (stats.total_mb || 0).toFixed(2);
 
                 return `
                     <div class="card">
@@ -273,8 +424,22 @@
                                 <button class="copy-btn" onclick="copyText('${publicAddr}')">Copy</button>
                             </div>
                             ${subdomainAddr ? `
-                                <div style="font-size: 13px; color: #a78bfa;">
-                                    Domain: <b>${subdomainAddr}</b>
+                                <div style="font-size: 13px; color: #a78bfa; margin-bottom: 6px;">
+                                    Subdomain: <b>${subdomainAddr}</b>
+                                </div>
+                            ` : ''}
+
+                            <!-- Feature 1: Live Telemetry Stats -->
+                            <div class="stats-pill">
+                                <span>📊 Live Traffic: <b>${mbTotal} MB</b></span>
+                            </div>
+
+                            <!-- Feature 2: Minecraft SRV Generator -->
+                            ${t.protocol.toLowerCase() === 'tcp' && t.subdomain ? `
+                                <div style="margin-top: 8px;">
+                                    <button class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 3px 8px;" onclick="copyMinecraftSRV('${t.subdomain}', ${t.public_port}, '${baseDomain}')">
+                                        🎮 Copy DNS SRV Record
+                                    </button>
                                 </div>
                             ` : ''}
                         </div>
@@ -292,6 +457,142 @@
             }).join('');
         }
 
+        // Feature 2: Copy Minecraft DNS SRV string
+        function copyMinecraftSRV(sub, port, domain) {
+            const srv = `_minecraft._tcp.${sub} 3600 IN SRV 0 5 ${port} ${domain}.`;
+            navigator.clipboard.writeText(srv);
+            alert(`Copied Minecraft SRV record:\n\n${srv}\n\nAdd this to your DNS (Cloudflare) and players can connect directly via ${sub}.${domain} without specifying a port!`);
+        }
+
+        // Feature 10: 1-Click Launchers
+        function downloadLauncher(ext) {
+            const token = agents[0] ? agents[0].token : '';
+            window.location.href = `/api/scripts/launcher.${ext}?token=${encodeURIComponent(token)}`;
+        }
+
+        // Auth Logic
+        function openAuthModal(mode) {
+            authMode = mode;
+            switchAuthTab(mode);
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        function switchAuthTab(mode) {
+            authMode = mode;
+            if (mode === 'login') {
+                document.getElementById('tab-login').className = 'btn btn-sm';
+                document.getElementById('tab-reg').className = 'btn btn-secondary btn-sm';
+                document.getElementById('auth-modal-title').innerText = 'Sign In to tunnelit';
+                document.getElementById('auth-submit-btn').innerText = 'Sign In';
+            } else {
+                document.getElementById('tab-reg').className = 'btn btn-sm';
+                document.getElementById('tab-login').className = 'btn btn-secondary btn-sm';
+                document.getElementById('auth-modal-title').innerText = 'Create Account (Get Dedicated Port)';
+                document.getElementById('auth-submit-btn').innerText = 'Register & Claim Port';
+            }
+        }
+
+        async function submitAuth() {
+            const username = document.getElementById('auth-user').value.trim();
+            const password = document.getElementById('auth-pass').value;
+            const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    sessionToken = data.token;
+                    localStorage.setItem('tunnelit_session', sessionToken);
+                    closeAuthModal();
+                    await init();
+                } else {
+                    const err = await res.text();
+                    alert("Auth error: " + err);
+                }
+            } catch(e) {
+                alert("Error: " + e);
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST', headers: getAuthHeaders() });
+            sessionToken = null;
+            localStorage.removeItem('tunnelit_session');
+            await init();
+        }
+
+        // Feature 9: Master Admin
+        function openAdminModal() {
+            document.getElementById('admin-modal').style.display = 'flex';
+            if (adminToken) {
+                loadAdminUsers();
+            }
+        }
+
+        function closeAdminModal() {
+            document.getElementById('admin-modal').style.display = 'none';
+        }
+
+        async function submitAdminLogin() {
+            const password = document.getElementById('admin-pass').value;
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    adminToken = data.token;
+                    localStorage.setItem('tunnelit_admin_token', adminToken);
+                    loadAdminUsers();
+                } else {
+                    alert("Incorrect master password!");
+                }
+            } catch(e) {
+                alert("Error: " + e);
+            }
+        }
+
+        async function loadAdminUsers() {
+            try {
+                const res = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${adminToken}`, 'x-session-token': adminToken } });
+                if (res.ok) {
+                    const users = await res.json();
+                    document.getElementById('admin-login-box').style.display = 'none';
+                    document.getElementById('admin-content-box').style.display = 'block';
+                    const tbody = document.getElementById('admin-users-list');
+                    tbody.innerHTML = users.map(u => `
+                        <tr>
+                            <td><b>${escapeHtml(u.username)}</b></td>
+                            <td><span class="badge-port">:${u.dedicated_port}</span></td>
+                            <td><span style="color: ${u.is_banned ? '#ef4444' : '#10b981'}">${u.is_banned ? 'Banned' : 'Active'}</span></td>
+                            <td>
+                                <button class="btn btn-sm ${u.is_banned ? 'btn-secondary' : 'btn-danger'}" onclick="toggleBan('${u.id}', ${!u.is_banned})">
+                                    ${u.is_banned ? 'Unban' : 'Ban'}
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch(e) {}
+        }
+
+        async function toggleBan(id, ban) {
+            const endpoint = ban ? `/api/admin/users/${id}/ban` : `/api/admin/users/${id}/unban`;
+            await fetch(endpoint, { method: 'POST', headers: { 'x-session-token': adminToken } });
+            loadAdminUsers();
+        }
+
+        // Tunnels CRUD
         function openCreateModal() {
             const select = document.getElementById('t-agent');
             select.innerHTML = agents.map(a => `
@@ -299,8 +600,12 @@
             `).join('');
 
             if (agents.length === 0) {
-                alert("Please start an agent on your computer first!");
+                alert("Please connect a device first using 1-Click Launch or tunnelit-agent!");
                 return;
+            }
+
+            if (currentUser) {
+                document.getElementById('t-public').value = currentUser.dedicated_port;
             }
 
             document.getElementById('create-modal').style.display = 'flex';
@@ -316,7 +621,7 @@
             const protocol = document.getElementById('t-proto').value;
             const local_port = parseInt(document.getElementById('t-local').value);
             const preferred_port = document.getElementById('t-public').value ? parseInt(document.getElementById('t-public').value) : null;
-            const subdomain = document.getElementById('t-subdomain').value || null;
+            const subdomain = document.getElementById('t-subdomain').value.trim() || null;
 
             if (!local_port) {
                 alert("Please specify a local port!");
@@ -326,7 +631,7 @@
             try {
                 const res = await fetch('/api/tunnels', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ agent_id, name, protocol, local_port, preferred_port, subdomain })
                 });
 
@@ -338,41 +643,8 @@
                     alert("Failed to create tunnel: " + err);
                 }
             } catch(e) {
-                alert("Error creating tunnel: " + e);
+                alert("Error: " + e);
             }
-        }
-
-        async function toggleTunnel(id) {
-            await fetch(`/api/tunnels/${id}/toggle`, { method: 'POST' });
-            loadData();
-        }
-
-        async function deleteTunnel(id) {
-            if (confirm("Delete this tunnel?")) {
-                await fetch(`/api/tunnels/${id}`, { method: 'DELETE' });
-                loadData();
-            }
-        }
-
-        async function deleteAgent(id) {
-            if (confirm("Delete this agent and all its tunnels?")) {
-                await fetch(`/api/agents/${id}`, { method: 'DELETE' });
-                loadData();
-            }
-        }
-
-        function copyToken(token) {
-            navigator.clipboard.writeText(token);
-            alert("Token copied to clipboard!");
-        }
-
-        function copyText(text) {
-            navigator.clipboard.writeText(text);
-            alert(`Copied: ${text}`);
-        }
-
-        function escapeHtml(str) {
-            return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
         }
 
         function openEditModal(id) {
@@ -395,20 +667,14 @@
             const name = document.getElementById('e-name').value || 'Tunnel';
             const protocol = document.getElementById('e-proto').value;
             const local_port = parseInt(document.getElementById('e-local').value);
-            const subdomain = document.getElementById('e-subdomain').value || null;
-
-            if (!local_port) {
-                alert("Please specify a local port!");
-                return;
-            }
+            const subdomain = document.getElementById('e-subdomain').value.trim() || null;
 
             try {
                 const res = await fetch(`/api/tunnels/${id}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ name, protocol, local_port, subdomain })
                 });
-
                 if (res.ok) {
                     closeEditModal();
                     loadData();
@@ -421,8 +687,42 @@
             }
         }
 
-        loadData();
+        async function toggleTunnel(id) {
+            await fetch(`/api/tunnels/${id}/toggle`, { method: 'POST', headers: getAuthHeaders() });
+            loadData();
+        }
+
+        async function deleteTunnel(id) {
+            if (confirm("Delete this tunnel?")) {
+                await fetch(`/api/tunnels/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                loadData();
+            }
+        }
+
+        async function deleteAgent(id) {
+            if (confirm("Delete this agent and all its tunnels?")) {
+                await fetch(`/api/agents/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                loadData();
+            }
+        }
+
+        function copyToken(token) {
+            navigator.clipboard.writeText(token);
+            alert("Token copied to clipboard!");
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text);
+            alert(`Copied: ${text}`);
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        init();
         setInterval(loadData, 3000);
+        setInterval(updateLiveStats, 2000);
     </script>
 </body>
 </html>
