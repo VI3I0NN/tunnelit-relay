@@ -117,8 +117,7 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
-                <button class="btn btn-secondary btn-sm" onclick="downloadLauncher('sh')">📥 1-Click Launch (.sh)</button>
-                <button class="btn btn-secondary btn-sm" onclick="downloadLauncher('bat')">📥 Windows (.bat)</button>
+                <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
                 <button class="btn btn-sm" onclick="openCreateModal()">+ New Tunnel</button>
             </div>
         </div>
@@ -126,6 +125,7 @@
         <!-- AGENTS SECTION (Feature 4: Multi-Agent) -->
         <div class="section-header">
             <div class="section-title">Connected Devices (Multi-Agents)</div>
+            <button class="btn btn-secondary btn-sm" onclick="openClaimModal()">🔗 Link Device by Code</button>
         </div>
         <div id="agents-grid" class="grid">
             <!-- Dynamically populated -->
@@ -159,6 +159,22 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeAuthModal()">Cancel</button>
                 <button class="btn" id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
+            </div>
+        </div>
+    <!-- LINK BY CODE MODAL -->
+    <div id="claim-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-title">🔗 Link Device by Code</div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                Run <code>tunnelit-agent</code> in your computer's terminal, and enter the 6-digit claim code shown:
+            </p>
+            <div class="form-group">
+                <label class="form-label">6-Digit Claim Code</label>
+                <input id="claim-input-code" type="text" maxlength="6" class="form-input" placeholder="e.g. 748291" style="font-size: 22px; letter-spacing: 4px; text-align: center; font-family: monospace; font-weight: 700;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeClaimModal()">Cancel</button>
+                <button class="btn" id="claim-submit-btn" onclick="submitClaimByCode()">Link Device</button>
             </div>
         </div>
     </div>
@@ -289,6 +305,11 @@
             await checkAuth();
             await loadData();
             updateLiveStats();
+
+            // Secret Master Admin access: /admin or #admin
+            if (window.location.pathname === '/admin' || window.location.hash === '#admin') {
+                openAdminModal();
+            }
         }
 
         async function checkAuth() {
@@ -304,7 +325,6 @@
                             <div class="user-pill">
                                 <span>👤 <b>${escapeHtml(currentUser.username)}</b></span>
                             </div>
-                            <button class="btn btn-purple btn-sm" onclick="openAdminModal()">👑 Master Admin</button>
                             <button class="btn btn-secondary btn-sm" onclick="logout()">Logout</button>
                         `;
                         banner.style.display = 'flex';
@@ -318,7 +338,6 @@
             currentUser = null;
             banner.style.display = 'none';
             controls.innerHTML = `
-                <button class="btn btn-secondary btn-sm" onclick="openAdminModal()">👑 Admin</button>
                 <button class="btn btn-sm" onclick="openAuthModal('login')">Sign In</button>
                 <button class="btn btn-secondary btn-sm" onclick="openAuthModal('reg')">Register</button>
             `;
@@ -468,6 +487,49 @@
         function downloadLauncher(ext) {
             const token = agents[0] ? agents[0].token : '';
             window.location.href = `/api/scripts/launcher.${ext}?token=${encodeURIComponent(token)}`;
+        }
+
+        // Link Device by Code Logic
+        function openClaimModal() {
+            document.getElementById('claim-input-code').value = '';
+            document.getElementById('claim-modal').style.display = 'flex';
+        }
+
+        function closeClaimModal() {
+            document.getElementById('claim-modal').style.display = 'none';
+        }
+
+        async function submitClaimByCode() {
+            const code = document.getElementById('claim-input-code').value.trim();
+            if (!code) {
+                alert("Please enter the 6-digit claim code!");
+                return;
+            }
+
+            const btn = document.getElementById('claim-submit-btn');
+            btn.disabled = true;
+            btn.innerText = "Linking...";
+
+            try {
+                const res = await fetch(`/api/claim/${code}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (res.ok) {
+                    alert("✅ Device successfully linked to your account!");
+                    closeClaimModal();
+                    loadData();
+                } else {
+                    const err = await res.text();
+                    alert("Failed to link device: " + err);
+                }
+            } catch(e) {
+                alert("Network error: " + e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Link Device";
+            }
         }
 
         // Auth Logic

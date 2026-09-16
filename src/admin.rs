@@ -23,6 +23,7 @@ const CLAIM_HTML: &str = include_str!("claim.html");
 pub fn admin_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(serve_admin_page))
+        .route("/admin", get(serve_admin_page))
         .route("/claim/:code", get(serve_claim_page))
         .route("/api/claim/:code", post(claim_agent))
         // Auth
