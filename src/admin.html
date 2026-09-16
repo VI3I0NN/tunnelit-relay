@@ -572,9 +572,11 @@
         }
 
         function downloadQuickLauncher(ext) {
-            if (!activeLauncherToken) return;
-            window.location.href = `/api/scripts/launcher.${ext}?token=${encodeURIComponent(activeLauncherToken)}`;
+            const tokenPart = activeLauncherToken ? `&token=${encodeURIComponent(activeLauncherToken)}` : '';
+            const sessionPart = sessionToken ? `&session=${encodeURIComponent(sessionToken)}` : '';
+            window.location.href = `/api/scripts/launcher.${ext}?${tokenPart}${sessionPart}`;
         }
+
 
         function copyCmd(type) {
             const el = document.getElementById(type === 'sh' ? 'sh-cmd-display' : 'bat-cmd-display');

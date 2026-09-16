@@ -673,12 +673,48 @@ async fn get_live_stats(
 #[derive(Deserialize)]
 struct ScriptQuery {
     token: Option<String>,
+    session: Option<String>,
+}
+
+async fn resolve_token_for_script(query: &ScriptQuery, headers: &HeaderMap, state: &AppState) -> Option<String> {
+    if let Some(ref t) = query.token {
+        if !t.trim().is_empty() && t != "YOUR_TOKEN_HERE" {
+            return Some(t.trim().to_string());
+        }
+    }
+
+    let user_id = if let Some(ref sess) = query.session {
+        let sessions = state.user_sessions.read().await;
+        sessions.get(sess).cloned()
+    } else {
+        get_current_user_id(headers, state).await
+    };
+
+    if let Some(uid) = user_id {
+        let db = state.db.lock().await;
+        if let Ok(agents) = db::list_agents_for_user(&db, &uid) {
+            if let Some(first) = agents.first() {
+                return Some(first.token.clone());
+            }
+        }
+        if let Ok(new_agent) = db::create_agent_for_user(&db, &uid, "My Computer") {
+            return Some(new_agent.token);
+        }
+    }
+
+    None
 }
 
 async fn get_launcher_sh(
     Query(query): Query<ScriptQuery>,
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    let token = query.token.unwrap_or_else(|| "YOUR_TOKEN_HERE".into());
+    let token_arg = match resolve_token_for_script(&query, &headers, &state).await {
+        Some(tok) => format!("--token \"{}\"", tok),
+        None => "".to_string(),
+    };
+
     let script = format!(
 r#"#!/bin/bash
 set -e
@@ -688,9 +724,9 @@ curl -sSL "https://github.com/visionn1488/tunnelit-agent/releases/download/lates
 chmod +x "$HOME/.tunnelit/tunnelit-agent"
 
 echo "🚀 Starting tunnelit-agent..."
-"$HOME/.tunnelit/tunnelit-agent" --token "{}" --relay "wss://ws.ezbchat.fun/ws"
+"$HOME/.tunnelit/tunnelit-agent" {} --relay "wss://ws.ezbchat.fun/ws"
 "#,
-        token
+        token_arg
     );
 
     (
@@ -704,17 +740,23 @@ echo "🚀 Starting tunnelit-agent..."
 
 async fn get_launcher_bat(
     Query(query): Query<ScriptQuery>,
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    let token = query.token.unwrap_or_else(|| "YOUR_TOKEN_HERE".into());
+    let token_arg = match resolve_token_for_script(&query, &headers, &state).await {
+        Some(tok) => format!("--token \"{}\"", tok),
+        None => "".to_string(),
+    };
+
     let script = format!(
 r#"@echo off
 echo ⚡ Downloading tunnelit-agent for Windows...
 powershell -Command "Invoke-WebRequest -Uri 'https://github.com/visionn1488/tunnelit-agent/releases/download/latest/tunnelit-agent-windows-amd64.exe' -OutFile 'tunnelit-agent.exe'"
 echo 🚀 Starting tunnelit-agent...
-tunnelit-agent.exe --token "{}" --relay "wss://ws.ezbchat.fun/ws"
+tunnelit-agent.exe {} --relay "wss://ws.ezbchat.fun/ws"
 pause
 "#,
-        token
+        token_arg
     );
 
     (
@@ -725,3 +767,4 @@ pause
         script,
     )
 }
+
