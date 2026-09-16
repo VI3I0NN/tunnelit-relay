@@ -58,6 +58,11 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
         [],
     )?;
 
+    // Auto-migrate from older schema if columns are missing:
+    let _ = conn.execute("ALTER TABLE tunnels ADD COLUMN name TEXT NOT NULL DEFAULT 'Server'", []);
+    let _ = conn.execute("ALTER TABLE tunnels ADD COLUMN subdomain TEXT", []);
+    let _ = conn.execute("ALTER TABLE tunnels ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1", []);
+
     Ok(conn)
 }
 
