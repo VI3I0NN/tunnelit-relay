@@ -14,7 +14,7 @@ Relay-сервер для туннельного сервиса **tunnelit** —
 
 ```bash
 # Склонировать и собрать
-git clone https://github.com/visionn1488/tunnelit-relay.git
+git clone https://github.com/VI3I0NN/tunnelit-relay.git
 cd tunnelit-relay
 cargo build --release
 
@@ -115,12 +115,12 @@ Caddyfile (`/etc/caddy/Caddyfile`):
 
 ```caddyfile
 # Админ-панель
-admin.ezbchat.fun {
+admin.your.domain.com {
     reverse_proxy localhost:8080
 }
 
 # WebSocket для агентов
-ws.ezbchat.fun {
+ws.your.domain.com {
     reverse_proxy localhost:9090
 }
 ```
@@ -131,7 +131,7 @@ sudo systemctl restart caddy
 
 ### 4. Настроить DNS
 
-В панели управления доменом `ezbchat.fun` добавить:
+В панели управления доменом `your-domain.com` добавить:
 
 | Тип | Имя | Значение |
 |---|---|---|
@@ -158,7 +158,7 @@ sudo ufw allow 10000:60000/udp  # Туннели UDP
 
 ## Админ-панель
 
-Открыть `https://admin.ezbchat.fun` — тёмная веб-панель с:
+Открыть `https://admin.your-domain.com` — тёмная веб-панель с:
 - Таблицей активных туннелей
 - Списком заявок на субдомены (Approve / Reject)
 - Автообновлением каждые 5 секунд
